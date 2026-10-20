@@ -121,15 +121,9 @@ export type TaskState = {
   message: string;
   source?: "ai" | "export";
 };
-export type LicenseInfo = {
-  valid: boolean;
-  id: string;
-  development: boolean;
-  message?: string;
-};
 export type Bootstrap = {
   settings: Settings;
-  license: LicenseInfo;
+  development: boolean;
   albums: AlbumSummary[];
   version: string;
   aiConfig: AiConfig;

@@ -37,11 +37,6 @@ try {
     .pages()
     .find((p) => p.url().startsWith("memory://app/"));
   assert(page);
-  await page.getByPlaceholder("在这里粘贴完整卡密").waitFor();
-  await page
-    .getByPlaceholder("在这里粘贴完整卡密")
-    .fill(await readFile(".local/shared-v1.license", "utf8"));
-  await page.getByRole("button", { name: "验证并开始" }).click();
   await page.getByRole("heading", { name: "我的纪念册" }).waitFor();
   const library = await page.evaluate(() => window.memorybook.resources());
   assert(!library.phraseError && library.phrases.length > 0);
@@ -60,7 +55,7 @@ try {
           .update(await readFile(resolve(packageRoot, "Memorybook.exe")))
           .digest("hex"),
         exactShippedExecutable: true,
-        sharedLicenseAccepted: true,
+        directStartupWithoutActivation: true,
         libraryRendered: true,
         profile,
       },
@@ -68,7 +63,7 @@ try {
       2,
     ),
   );
-  console.log("Exact shipped executable rendered and activated successfully.");
+  console.log("Exact shipped executable rendered directly without activation.");
 } finally {
   if (browser) await browser.close();
   if (child.exitCode === null) child.kill();

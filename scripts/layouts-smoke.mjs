@@ -15,10 +15,6 @@ try {
   page.setDefaultTimeout(20000);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page
-    .getByPlaceholder("在这里粘贴完整卡密")
-    .fill(await readFile(".local/development.license", "utf8"));
-  await page.getByRole("button", { name: "验证并开始" }).click();
   await page.getByRole("heading", { name: "我的纪念册" }).waitFor();
   const images = await page.evaluate(() => {
     const values = [];

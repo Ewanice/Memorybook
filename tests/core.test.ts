@@ -1,6 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { generateKeyPairSync, sign } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,7 +8,6 @@ import { applyEdit } from "../src/domain/edit";
 import { assertAlbum, assertSettings } from "../src/domain/validation";
 import { defaultSettings, type Album } from "../src/domain/model";
 import { Store } from "../src/infrastructure/store";
-import { verifyLicense } from "../src/infrastructure/license";
 import { applyProposal, AiCoordinator } from "../src/application/ai";
 import { AlbumService } from "../src/application/service";
 
@@ -180,36 +178,6 @@ test("设置校验拒绝未知字段，损坏设置只临时降级且保留原�
   s.setValue("settings", "{broken");
   assert.deepEqual(s.settings(), defaultSettings);
   assert.equal(s.getValue("settings"), "{broken");
-});
-test("同一个签名卡密可重复验证，伪造与开发码不可进入正式版本", () => {
-  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
-  const key = publicKey.export({ type: "spki", format: "pem" }).toString();
-  const payload = Buffer.from(
-    JSON.stringify({
-      productId: "memorybook-desktop",
-      majorVersion: 1,
-      edition: "personal",
-      licenseId: "shared-v1",
-      keyId: "release-v1",
-    }),
-  );
-  const token =
-    payload.toString("base64url") +
-    "." +
-    sign(null, payload, privateKey).toString("base64url");
-  assert.deepEqual(
-    verifyLicense(token, key, false),
-    verifyLicense(token, key, false),
-  );
-  assert.throws(() => verifyLicense(token, key, true));
-  const bad = Buffer.from(payload.toString().replace("personal", "business"));
-  assert.throws(() =>
-    verifyLicense(
-      bad.toString("base64url") + "." + token.split(".")[1],
-      key,
-      false,
-    ),
-  );
 });
 function annotated(): Album {
   const a = album();

@@ -59,10 +59,6 @@ await cp(source, join(directory, "Memorybook"), {
   },
 });
 await writeFile(
-  join(directory, "license.txt"),
-  (await readFile(".local/shared-v1.license", "utf8")).trim() + "\n",
-);
-await writeFile(
   join(directory, "README.txt"),
   `拾页 / Memorybook ${version}
 
@@ -70,7 +66,7 @@ Windows x64 完整文件夹版
 
 1. 将整个压缩包解压到可写的目录，例如 D:\\Memorybook。不要只解压 EXE，也不要直接在压缩包内运行。
 2. 进入“Memorybook”文件夹，运行 Memorybook.exe。保留旁边的 DLL、locales、resources、materials 与 phrases.txt。
-3. 首次输入“license.txt”中的完整卡密。之后可离线使用。
+3. 打开即用，无需卡密、激活或登录；普通编辑与导出可离线使用。
 4. 首页可管理贴纸、短语和排版。新建时选择照片、贴纸，全部排版自动随机使用；也可选择本地 Codex 生成。
    上传到贴纸库后，新建时需选中要自动排版的贴纸。编辑器“＋贴纸”可直接选用全局贴纸库；“＋照片”和“＋贴纸”分别显示对应素材。
 5. 选择任何元素调整大小、位置、字体和内容；右侧“页面底色与纸张”可逐页更换背景。
@@ -146,5 +142,5 @@ try {
   closeSync(fd);
 }
 console.log(
-  `完整目录已生成：${directory}\nZIP：${output}\n共 ${files.length} 个文件；不包含用户工程、导入字体、私钥或开发卡密。`,
+  `完整目录已生成：${directory}\nZIP：${output}\n共 ${files.length} 个文件；不包含用户工程、导入字体、本机凭证。`,
 );

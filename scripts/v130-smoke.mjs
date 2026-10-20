@@ -27,10 +27,6 @@ try {
   page.on("console", (m) => {
     if (m.type() === "error") console.error(m.text());
   });
-  await page
-    .getByPlaceholder("在这里粘贴完整卡密")
-    .fill(await readFile(".local/development.license", "utf8"));
-  await page.getByRole("button", { name: "验证并开始" }).click();
   await page.getByRole("heading", { name: "我的纪念册" }).waitFor();
   await expect(page.locator(".codex-badge")).toBeVisible();
   await expect(

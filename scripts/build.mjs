@@ -4,34 +4,8 @@ import { mkdir, writeFile, readFile, copyFile, cp, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
-import { createPublicKey } from "node:crypto";
 const production = process.env.MEMORY_RELEASE === "1";
-const publicKeyPath = production
-  ? process.env.MEMORY_PUBLIC_KEY
-  : ".local/public.pem";
-if (!publicKeyPath)
-  throw new Error("正式发布必须设置 MEMORY_PUBLIC_KEY，不接受开发密钥。");
-const publicKey = await readFile(publicKeyPath, "utf8");
-if (createPublicKey(publicKey).asymmetricKeyType !== "ed25519")
-  throw new Error("授权公钥必须使用 Ed25519");
-if (production) {
-  let developmentKey;
-  try {
-    developmentKey = await readFile(".local/public.pem", "utf8");
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-  }
-  if (
-    developmentKey &&
-    createPublicKey(developmentKey)
-      .export({ type: "spki", format: "der" })
-      .equals(
-        createPublicKey(publicKey).export({ type: "spki", format: "der" }),
-      )
-  )
-    throw new Error("正式构建不能使用本机开发公钥");
-}
-const config = { publicKey, development: !production };
+const config = { development: !production };
 await mkdir("dist", { recursive: true });
 await rm("dist/短语库.txt", { force: true });
 await copyFile("assets/icon.png", "dist/icon.png");

@@ -30,10 +30,6 @@ try {
   page.setDefaultTimeout(15000);
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("dialog", (dialog) => dialog.accept());
-  await page
-    .getByPlaceholder("在这里粘贴完整卡密")
-    .fill(await readFile(".local/development.license", "utf8"));
-  await page.getByRole("button", { name: "验证并开始" }).click();
   await page.getByRole("heading", { name: "我的纪念册" }).waitFor();
   const fixtures = [];
   for (let seed = 0; seed < 6; seed++) {

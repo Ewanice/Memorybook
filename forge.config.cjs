@@ -65,7 +65,9 @@ module.exports = {
       }
       const info = JSON.parse(fs.readFileSync("dist/build-info.json", "utf8"));
       if (info.development)
-        throw new Error("禁止打包包含开发公钥的构建。使用正式公钥重新构建。");
+        throw new Error(
+          "禁止打包开发构建。请设置 MEMORY_RELEASE=1 后重新构建。",
+        );
       if (process.env.MEMORY_SIGN_CERT && !process.env.MEMORY_SIGN_PASSWORD)
         throw new Error("配置签名证书时还需提供证书密码。");
     },

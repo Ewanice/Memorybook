@@ -48,10 +48,6 @@ try {
   assert(page);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page
-    .getByPlaceholder("在这里粘贴完整卡密")
-    .fill(await readFile(".local/shared-v1.license", "utf8"));
-  await page.getByRole("button", { name: "验证并开始" }).click();
   await page.getByRole("heading", { name: "我的纪念册" }).waitFor();
   const paths = await page.evaluate(() => window.memorybook.storageInfo());
   assert.equal(resolve(paths.root), root);

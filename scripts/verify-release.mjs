@@ -25,10 +25,6 @@ assert.equal(
   false,
 );
 const main = extractFile(archive, "dist/main.cjs").toString();
-const privateKey = (await readFile(".local/release/private.pem", "utf8")).split(
-  "\n",
-)[1];
-assert(!main.includes(privateKey));
 const fuse = await getCurrentFuseWire(resolve(root, "Memorybook.exe"));
 assert.equal(fuse[FuseV1Options.RunAsNode], FuseState.DISABLE);
 assert.equal(
@@ -49,18 +45,21 @@ try {
     app.getPath("userData"),
   );
   assert.equal(resolve(actual), profile, "发布包验证必须使用隔离数据目录");
-  await page
-    .getByPlaceholder("在这里粘贴完整卡密")
-    .fill(await readFile(".local/shared-v1.license", "utf8"));
-  await page.getByRole("button", { name: "验证并开始" }).click();
   await page.getByRole("heading", { name: "我的纪念册" }).waitFor();
   await page.getByRole("button", { name: "＋ 新建纪念册" }).click();
   await page.getByPlaceholder("例如：明日世界").fill("发布包验收");
   await page.getByRole("button", { name: "生成纪念册 →" }).click();
   await page.getByText("已保存在本机", { exact: true }).waitFor();
   const boot = await page.evaluate(() => window.memorybook.bootstrap());
-  assert.equal(boot.license.development, false);
-  assert.equal(boot.license.valid, true);
+  assert.equal(boot.development, false);
+  assert.equal("license" in boot, false);
+  assert.equal(
+    await page.evaluate(
+      () =>
+        "activate" in window.memorybook || "importLicense" in window.memorybook,
+    ),
+    false,
+  );
   const library = await page.evaluate(() => window.memorybook.resources());
   assert(!library.phraseError && library.phrases.length > 0);
   assert(!library.phrasePath.includes("app.asar"));
@@ -75,11 +74,10 @@ try {
           .update(await readFile(archive))
           .digest("hex"),
         files: files.length,
-        privateKeyExcluded: true,
-        developerLicenseExcluded: true,
+        activationApiRemoved: true,
         integrityEnabled: true,
         packagedAsarStartup: true,
-        sharedLicenseValidated: true,
+        directStartupWithoutActivation: true,
         projectCreated: true,
         profile,
       },
@@ -87,7 +85,7 @@ try {
       2,
     ),
   );
-  console.log("Packaged ASAR and production license verified.");
+  console.log("Packaged ASAR and direct startup without activation verified.");
 } finally {
   await application.close();
 }

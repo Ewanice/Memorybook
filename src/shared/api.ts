@@ -3,7 +3,6 @@ import type {
   Asset,
   Bootstrap,
   Edit,
-  LicenseInfo,
   Settings,
   TaskState,
   AiConfig,
@@ -59,7 +58,6 @@ export interface DesktopApi {
     pageIds?: string[],
   ): Promise<{ assets: string[]; fonts: string[] }>;
   bootstrap(): Promise<Bootstrap>;
-  activate(token: string): Promise<LicenseInfo>;
   importPhotos(): Promise<ImportResult>;
   fonts(): Promise<import("../domain/fonts").ImportedFont[]>;
   importFonts(): Promise<{
@@ -142,7 +140,6 @@ export interface DesktopApi {
   diagnostics(): Promise<string>;
   exportDiagnostics(): Promise<string | null>;
   notices(): Promise<string>;
-  importLicense(): Promise<LicenseInfo | null>;
   comparison(id: string): Promise<{ before: Album; after: Album } | null>;
   undoAi(id: string, revision: number): Promise<Album>;
   rejectAiNote(id: string, revision: number, noteId: string): Promise<Album>;

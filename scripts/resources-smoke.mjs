@@ -16,10 +16,6 @@ const errors = [];
 try {
   const page = await app.firstWindow();
   page.on("pageerror", (error) => errors.push(error.message));
-  await page
-    .getByPlaceholder("在这里粘贴完整卡密")
-    .fill(await readFile(".local/development.license", "utf8"));
-  await page.getByRole("button", { name: "验证并开始" }).click();
   await page.getByRole("heading", { name: "我的纪念册" }).waitFor();
   let resources = await page.evaluate(() => window.memorybook.resources());
   assert(!resources.phraseError && resources.phrases.length > 0);

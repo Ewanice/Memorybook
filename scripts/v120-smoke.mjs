@@ -17,10 +17,6 @@ try {
   const page = await app.firstWindow();
   page.setDefaultTimeout(20000);
   page.on("pageerror", (error) => errors.push(error.message));
-  await page
-    .getByPlaceholder("在这里粘贴完整卡密")
-    .fill(await readFile(".local/development.license", "utf8"));
-  await page.getByRole("button", { name: "验证并开始" }).click();
   await page.getByRole("heading", { name: "我的纪念册" }).waitFor();
   const library = await page.evaluate(() => window.memorybook.resources());
   phrasePath = library.phrasePath;

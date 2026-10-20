@@ -23,10 +23,6 @@ try {
   });
   page.on("pageerror", (error) => errors.push(error.message));
   await page.screenshot({ path: resolve(".local/startup.png") });
-  await page
-    .getByPlaceholder("在这里粘贴完整卡密")
-    .fill(await readFile(".local/development.license", "utf8"));
-  await page.getByRole("button", { name: "验证并开始" }).click();
   await page.getByRole("heading", { name: "我的纪念册" }).waitFor();
   await page.screenshot({
     path: resolve(".local/library.png"),
@@ -366,6 +362,15 @@ try {
   await application.close();
   if (testServer) await new Promise((resolve) => testServer.close(resolve));
 }
+// Existing installations may still contain an obsolete or damaged activation value.
+const { DatabaseSync } = await import("node:sqlite");
+const legacy = new DatabaseSync(resolve(folder, "memorybook.sqlite"));
+legacy
+  .prepare(
+    "INSERT INTO preferences(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+  )
+  .run("license", "obsolete-invalid-license");
+legacy.close();
 const reopened = await electron.launch({
   args: ["."],
   env: { ...process.env, MEMORY_USER_DATA: folder },
@@ -377,7 +382,7 @@ try {
   const state = await page.evaluate(() => window.memorybook.bootstrap());
   assert.equal(state.settings.zoom, 150);
   assert(state.albums.some((a) => a.pages === 100));
-  assert.equal(state.license.valid, true);
+  assert.equal("license" in state, false);
   console.log("Restart persistence verified.");
 } finally {
   await reopened.close();

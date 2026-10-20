@@ -127,7 +127,6 @@ export function App() {
   const [preview, setPreview] = useState(false);
   const [printOptions, setPrintOptions] = useState<PrintOptions>({});
   const [task, setTask] = useState<TaskState>({ status: "idle", message: "" });
-  const [card, setCard] = useState("");
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [newOptions, setNewOptions] = useState<CreateOptions>({
     ...defaultCreateOptions,
@@ -167,7 +166,7 @@ export function App() {
       ),
     ]).catch((error) => report(error.message));
     setData(boot);
-    if (boot.license.valid) setResources(await api.resources());
+    setResources(await api.resources());
     setTemplateDraft(await api.templateDraft());
     const issues = await api.health();
     if (issues.length)
@@ -193,7 +192,7 @@ export function App() {
       .catch((e) => report(e.message));
   }
   useEffect(() => {
-    if (!data?.license.valid) return;
+    if (!data) return;
     const refreshStatus = () => {
       void api
         .codexStatus()
@@ -203,7 +202,7 @@ export function App() {
     refreshStatus();
     const timer = setInterval(refreshStatus, 30000);
     return () => clearInterval(timer);
-  }, [data?.license.valid]);
+  }, [data !== null]);
   useEffect(() => {
     if (!generating) return;
     const timer = setInterval(() => {
@@ -744,7 +743,7 @@ export function App() {
               onClick={() => {
                 if (
                   window.confirm(
-                    "仅在设置损坏时重置。损坏副本会保留，项目和授权不会删除。",
+                    "仅在设置损坏时重置。损坏副本会保留，项目和 AI 凭证不会删除。",
                   )
                 )
                   void run(async () => {
@@ -767,79 +766,6 @@ export function App() {
       </button>
     </div>
   );
-  if (!data.license.valid)
-    return (
-      <main className="activation">
-        <div className="activation-art">
-          <span className="folio-number">01 — MEMORYBOOK</span>
-          <h1>
-            把那些瞬间，
-            <br />
-            留在纸页之间。
-          </h1>
-          <div className="paper-stack">
-            <div>
-              MEMORIES
-              <br />
-              <em>worth keeping.</em>
-            </div>
-          </div>
-          <p>你的照片，你的故事，你自己的纪念册。</p>
-        </div>
-        <section>
-          <div className="brand">
-            拾页<span>MEMORYBOOK</span>
-          </div>
-          <h2>开启你的纪念册</h2>
-          <p className="muted">
-            粘贴购买后收到的统一卡密。
-            <br />
-            验证一次，之后即可离线使用。
-          </p>
-          <label className="field">
-            软件卡密
-            <textarea
-              value={card}
-              onChange={(e) => setCard(e.target.value)}
-              rows={5}
-              placeholder="在这里粘贴完整卡密"
-            />
-          </label>
-          <button
-            className="primary wide"
-            disabled={busy || !card.trim()}
-            onClick={() =>
-              void run(async () => {
-                await api.activate(card);
-                await refresh();
-              })
-            }
-          >
-            {busy ? "正在验证…" : "验证并开始"}
-          </button>
-          <button
-            className="wide"
-            disabled={busy}
-            onClick={() =>
-              void run(async () => {
-                const value = await api.importLicense();
-                if (value) await refresh();
-              })
-            }
-          >
-            导入卡密文件
-          </button>
-          <small>照片和项目保存在本机。只有主动使用 AI 时才联网。</small>
-          {data.license.message && (
-            <p className="warning">{data.license.message}</p>
-          )}
-          {data.license.development && (
-            <p className="dev-label">开发构建 · 仅接受本机开发卡密</p>
-          )}
-        </section>
-        {notice}
-      </main>
-    );
   return (
     <FontContext.Provider value={data.fonts ?? []}>
       <div
@@ -1546,7 +1472,18 @@ export function App() {
                               选中任意元素，在右侧写下修改意见。
                             </p>
                           )}
-                          <button disabled={locked} onClick={()=>void run(async()=>{const value=await api.comparison(album.id);if(value)setComparison(value);else report("当前保留的历史中没有 AI 修改。");})}>查看最近 AI 修改</button>
+                          <button
+                            disabled={locked}
+                            onClick={() =>
+                              void run(async () => {
+                                const value = await api.comparison(album.id);
+                                if (value) setComparison(value);
+                                else report("当前保留的历史中没有 AI 修改。");
+                              })
+                            }
+                          >
+                            查看最近 AI 修改
+                          </button>
                           <button
                             className="primary"
                             disabled={

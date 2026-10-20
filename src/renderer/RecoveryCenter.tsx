@@ -82,7 +82,7 @@ export function StoragePanel({
           onClick={() => {
             if (
               window.confirm(
-                "将合并导入备份中的纪念册、贴纸、排版与短语，不覆盖现有工程。API Key 和卡密不会被更换。是否继续？",
+                "将合并导入备份中的纪念册、贴纸、排版与短语，不覆盖现有工程。API Key 不会被更换。是否继续？",
               )
             )
               void run(() => api.restoreWorkspace());

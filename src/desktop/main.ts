@@ -40,15 +40,9 @@ import {
 } from "../domain/missing-resources";
 import { assertTemplateDraft } from "../domain/template-draft";
 import { AssetStore } from "../infrastructure/assets";
-import { verifyLicense } from "../infrastructure/license";
 import { AlbumService } from "../application/service";
 import { AiCoordinator } from "../application/ai";
-import {
-  DomainError,
-  type Album,
-  type Asset,
-  type LicenseInfo,
-} from "../domain/model";
+import { DomainError, type Album, type Asset } from "../domain/model";
 import { defaultSettings } from "../domain/model";
 import { assertAlbum, assertSettings } from "../domain/validation";
 import type { DesktopApi, ExportPayload, Reply } from "../shared/api";
@@ -70,7 +64,7 @@ import {
   migratePortableNames,
 } from "../infrastructure/portable";
 
-declare const __BUILD_CONFIG__: { publicKey: string; development: boolean };
+declare const __BUILD_CONFIG__: { development: boolean };
 const build = __BUILD_CONFIG__;
 app.setName("Memorybook");
 let storage: ReturnType<typeof configureStorage>;
@@ -128,24 +122,6 @@ let resources: ResourceLibrary;
 let generation: GenerationCoordinator;
 const imported = new Map<string, Asset>();
 const rendererRoot = join(__dirname, "renderer");
-function license(): LicenseInfo {
-  const token = store.getValue("license");
-  if (!token) return { valid: false, id: "", development: build.development };
-  try {
-    return verifyLicense(token, build.publicKey, build.development);
-  } catch (error) {
-    if (!(error instanceof DomainError)) throw error;
-    return {
-      valid: false,
-      id: "",
-      development: build.development,
-      message: "已保存的卡密无效，请重新输入购买后收到的完整卡密。",
-    };
-  }
-}
-function authorized(): void {
-  if (!license().valid) throw new DomainError("请先输入购买后收到的卡密。");
-}
 async function suggestedExportPath(name: string): Promise<string> {
   const directory =
     store.settings().exportDirectory || join(storage.root, "exports");
@@ -172,7 +148,6 @@ function diagnosticSummary(): string {
       electron: process.versions.electron,
       schemaVersion: 1,
       settingsVersion: store.settings().version,
-      authorized: license().valid,
       aiProtocol: aiPreferences.config().protocol,
       aiEnabled: store.settings().aiEnabled,
       busy: service.hasBusyTask(),
@@ -851,26 +826,13 @@ async function start(): Promise<void> {
     },
     bootstrap: async () => ({
       settings: store.settings(),
-      license: license(),
-      albums: license().valid ? store.list() : [],
+      development: build.development,
+      albums: store.list(),
       version: app.getVersion(),
       aiConfig: aiPreferences.config(),
       hasAiToken: aiPreferences.hasKey(),
       fonts: await availableFonts(),
     }),
-    activate: async (value) => {
-      const verified = verifyLicense(value, build.publicKey, build.development);
-      store.setValue("license", value.trim());
-      void backupDatabase(directory).catch(() =>
-        health.report(
-          "database-backup",
-          new DomainError(
-            "自动数据库备份未完成，工程保存不受影响；请检查空间和目录权限。",
-          ),
-        ),
-      );
-      return verified;
-    },
     fonts: () => availableFonts(),
     importFonts: async () => {
       const result = await dialog.showOpenDialog(window, {
@@ -1208,20 +1170,6 @@ async function start(): Promise<void> {
     },
     notices: async () =>
       readFile(join(rendererRoot, "third-party-notices.txt"), "utf8"),
-    importLicense: async () => {
-      const result = await dialog.showOpenDialog(window, {
-        filters: [{ name: "软件卡密", extensions: ["license"] }],
-        properties: ["openFile"],
-      });
-      const path = result.filePaths[0];
-      if (!path) return null;
-      if ((await stat(path)).size > 8192)
-        throw new DomainError("卡密文件过大。");
-      const value = await readFile(path, "utf8");
-      const verified = verifyLicense(value, build.publicKey, build.development);
-      store.setValue("license", value.trim());
-      return verified;
-    },
     comparison: async (id) => store.comparison(id),
     undoAi: async (id, revision) => {
       service.assertWritable(id);
@@ -1295,15 +1243,6 @@ async function start(): Promise<void> {
           !Object.hasOwn(methods, method)
         )
           throw new DomainError("不允许的请求。");
-        if (
-          ![
-            "bootstrap",
-            "activate",
-            "importLicense",
-            "repairSettings",
-          ].includes(method)
-        )
-          authorized();
         const fn = methods[method as keyof DesktopApi] as (
           ...input: unknown[]
         ) => Promise<unknown>;
@@ -1325,15 +1264,14 @@ async function start(): Promise<void> {
   );
   await window.loadURL("memory://app/");
   const autoBackup = () => {
-    if (license().valid)
-      void backupDatabase(directory).catch(() =>
-        health.report(
-          "database-backup",
-          new DomainError(
-            "自动数据库备份未完成，工程保存不受影响；请检查空间和目录权限。",
-          ),
+    void backupDatabase(directory).catch(() =>
+      health.report(
+        "database-backup",
+        new DomainError(
+          "自动数据库备份未完成，工程保存不受影响；请检查空间和目录权限。",
         ),
-      );
+      ),
+    );
   };
   autoBackup();
   const backupTimer = setInterval(autoBackup, 60000);

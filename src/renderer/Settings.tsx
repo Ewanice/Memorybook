@@ -21,7 +21,6 @@ export function SettingsDialog({
 }) {
   const [tab, setTab] = useState(initialTab);
   const [dirty, setDirty] = useState(false);
-  const [license, setLicense] = useState("");
   const [busy, setBusy] = useState(false);
   const settings = data.settings;
   const [cache, setCache] = useState<{ bytes: number; files: number } | null>(
@@ -97,7 +96,7 @@ export function SettingsDialog({
               "字体库",
               "本地 Codex",
               "AI",
-              "授权与关于",
+              "关于",
             ].map((t) => (
               <button
                 key={t}
@@ -303,50 +302,19 @@ export function SettingsDialog({
                 <AiSettings data={data} action={action} />
               </>
             )}
-            {tab === "授权与关于" && (
+            {tab === "关于" && (
               <>
                 <div className="brand large">
                   拾页<span>MEMORYBOOK</span>
                 </div>
                 <p>
                   版本 {data.version}
-                  {data.license.development ? " · 开发构建" : ""}
+                  {data.development ? " · 开发构建" : ""}
                 </p>
-                <p className="license-badge">已授权 · 当前大版本离线使用</p>
                 <p className="muted">
-                  所有购买者使用统一卡密，不绑定设备。AI 使用你自己的 API Key。
+                  打开即可使用，普通编辑与 PDF 导出均可离线完成。AI 使用你自己的
+                  API Key 或本地 Codex。
                 </p>
-                <label className="field">
-                  更换卡密
-                  <textarea
-                    value={license}
-                    onChange={(e) => setLicense(e.target.value)}
-                    rows={3}
-                    placeholder="粘贴完整卡密"
-                  />
-                </label>
-                <button
-                  disabled={busy || !license}
-                  onClick={() =>
-                    void action(async () => {
-                      await window.memorybook.activate(license);
-                      setLicense("");
-                    }, "授权已更新。")
-                  }
-                >
-                  验证并更换
-                </button>
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    void action(async () => {
-                      await window.memorybook.importLicense();
-                    }, "已完成卡密文件处理。")
-                  }
-                >
-                  导入卡密文件
-                </button>
-                <hr />
                 <button
                   disabled={busy}
                   onClick={() =>
@@ -369,7 +337,7 @@ export function SettingsDialog({
                 </button>
                 {diagnostics && (
                   <details open>
-                    <summary>诊断预览 · 不含照片、卡密和令牌</summary>
+                    <summary>诊断预览 · 不含照片和令牌</summary>
                     <pre className="diagnostics">{diagnostics}</pre>
                     <button
                       disabled={busy}
@@ -395,11 +363,7 @@ export function SettingsDialog({
                 <button
                   disabled={busy}
                   onClick={() => {
-                    if (
-                      window.confirm(
-                        "恢复默认设置？项目、授权和 AI 凭证会保留。",
-                      )
-                    )
+                    if (window.confirm("恢复默认设置？项目和 AI 凭证会保留。"))
                       update(structuredClone(defaultSettings));
                   }}
                 >

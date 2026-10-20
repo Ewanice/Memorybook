@@ -1,1 +1,1 @@
-51cf72f0747eed08933b2a99b0addded8439f73ca7c9f45471a178c409bf8ab5  Memorybook-1.5.0-Windows-x64.zip
+2edd514bbf5897dec299a140695e80e7e9eedc0b23182bf521446264aa33972d  Memorybook-1.5.1-Windows-x64.zip

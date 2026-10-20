@@ -1,14 +1,18 @@
 {
-  "version": "1.5.0",
+  "version": "1.5.1",
   "platform": "win32-x64",
   "distribution": "folder",
+  "activationRequired": false,
   "codeSigned": false,
-  "file": "Memorybook-1.5.0-Windows-x64.zip",
-  "bytes": 172458644,
-  "sha256": "51cf72f0747eed08933b2a99b0addded8439f73ca7c9f45471a178c409bf8ab5",
+  "file": "Memorybook-1.5.1-Windows-x64.zip",
+  "bytes": 172456679,
+  "sha256": "2edd514bbf5897dec299a140695e80e7e9eedc0b23182bf521446264aa33972d",
   "verification": {
-    "unitTestsPassed": 66,
+    "unitTestsPassed": 65,
     "desktopResilienceChecksPassed": 12,
+    "directStartupWithoutActivation": true,
+    "legacyActivationIgnoredOnRestart": true,
+    "activationApiRemoved": true,
     "binaryStartup": true,
     "portableStorage": true,
     "zipFileHashes": true

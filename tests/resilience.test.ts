@@ -69,27 +69,57 @@ test("后台数据库副本可以恢复损坏数据库并保留工程与设置",
   const album = store.create(
     createAlbum("database recovery", "", "paper", "a5", []),
   );
-  store.setValue("license", "fixture license");
+  store.setValue("template-draft", "fixture draft");
   await backupDatabase(directory);
   store.close();
   writeFileSync(join(directory, "memorybook.sqlite"), "broken database");
   const restored = await openStore(directory);
   try {
     assert.equal(restored.get(album.id).name, album.name);
-    assert.equal(restored.getValue("license"), "fixture license");
+    assert.equal(restored.getValue("template-draft"), "fixture draft");
   } finally {
     restored.close();
   }
 });
-test("数据库表结构损坏时保留原库并打开可恢复工作空间",async t=>{
-  const directory=temp(),db=new DatabaseSync(join(directory,"memorybook.sqlite"));db.exec("CREATE TABLE unexpected(value TEXT);PRAGMA user_version=3;");db.close();
-  const store=await openStore(directory);t.after(()=>store.close());assert.deepEqual(store.list(),[]);assert(readdirSync(directory).some(n=>n.startsWith("damaged-database-")));
+test("数据库表结构损坏时保留原库并打开可恢复工作空间", async (t) => {
+  const directory = temp(),
+    db = new DatabaseSync(join(directory, "memorybook.sqlite"));
+  db.exec("CREATE TABLE unexpected(value TEXT);PRAGMA user_version=3;");
+  db.close();
+  const store = await openStore(directory);
+  t.after(() => store.close());
+  assert.deepEqual(store.list(), []);
+  assert(readdirSync(directory).some((n) => n.startsWith("damaged-database-")));
 });
-test("旧版撤销记录损坏不会阻断升级或正文编辑",async t=>{
-  const directory=temp(),album=createAlbum("legacy usable","","paper","a5",[]),db=new DatabaseSync(join(directory,"memorybook.sqlite"));
-  db.exec("CREATE TABLE albums(id TEXT PRIMARY KEY,revision INTEGER NOT NULL,document TEXT NOT NULL,cursor INTEGER NOT NULL DEFAULT 0);CREATE TABLE history(album_id TEXT,seq INTEGER,before_doc TEXT,after_doc TEXT,origin TEXT);CREATE TABLE preferences(key TEXT PRIMARY KEY,value TEXT);PRAGMA user_version=2;");
-  db.prepare("INSERT INTO albums VALUES(?,?,?,1)").run(album.id,0,JSON.stringify(album));db.prepare("INSERT INTO history VALUES(?,?,?,?,?)").run(album.id,1,"{broken",JSON.stringify(album),"manual");db.close();
-  const store=await openStore(directory);t.after(()=>store.close());assert.equal(store.list()[0]!.name,album.name);const saved=store.save({...store.get(album.id),name:"still editable"},0);assert.equal(saved.name,"still editable");assert(readdirSync(directory).some(n=>n.startsWith("before-schema-v3-")));
+test("旧版撤销记录损坏不会阻断升级或正文编辑", async (t) => {
+  const directory = temp(),
+    album = createAlbum("legacy usable", "", "paper", "a5", []),
+    db = new DatabaseSync(join(directory, "memorybook.sqlite"));
+  db.exec(
+    "CREATE TABLE albums(id TEXT PRIMARY KEY,revision INTEGER NOT NULL,document TEXT NOT NULL,cursor INTEGER NOT NULL DEFAULT 0);CREATE TABLE history(album_id TEXT,seq INTEGER,before_doc TEXT,after_doc TEXT,origin TEXT);CREATE TABLE preferences(key TEXT PRIMARY KEY,value TEXT);PRAGMA user_version=2;",
+  );
+  db.prepare("INSERT INTO albums VALUES(?,?,?,1)").run(
+    album.id,
+    0,
+    JSON.stringify(album),
+  );
+  db.prepare("INSERT INTO history VALUES(?,?,?,?,?)").run(
+    album.id,
+    1,
+    "{broken",
+    JSON.stringify(album),
+    "manual",
+  );
+  db.close();
+  const store = await openStore(directory);
+  t.after(() => store.close());
+  assert.equal(store.list()[0]!.name, album.name);
+  const saved = store.save(
+    { ...store.get(album.id), name: "still editable" },
+    0,
+  );
+  assert.equal(saved.name, "still editable");
+  assert(readdirSync(directory).some((n) => n.startsWith("before-schema-v3-")));
 });
 test("导入资料保留撤销历史，字体引用包含场景内的字体族名称", (t) => {
   const source = new Store(temp()),
