@@ -1,0 +1,67 @@
+{
+  "name": "memorybook-desktop",
+  "version": "1.5.0",
+  "private": true,
+  "description": "离线纪念册设计器",
+  "author": "Memorybook",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "dist/main.cjs",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "tsc --noEmit && node scripts/build.mjs",
+    "test": "tsx --test tests/*.test.ts",
+    "check": "tsc --noEmit",
+    "start": "electron .",
+    "license:dev": "node scripts/license.mjs dev",
+    "license:issue": "node scripts/license.mjs issue",
+    "package": "npm run build && electron-forge package",
+    "make": "npm run package",
+    "smoke": "node scripts/smoke.mjs",
+    "smoke:resources": "node scripts/resources-smoke.mjs",
+    "smoke:generation": "node scripts/v120-smoke.mjs",
+    "smoke:layouts": "node scripts/layouts-smoke.mjs",
+    "smoke:stickers": "node scripts/stickers-smoke.mjs",
+    "smoke:portable": "node scripts/v130-smoke.mjs",
+    "license:keygen": "node scripts/license.mjs keygen",
+    "format": "prettier --write src tests scripts *.json *.cjs",
+    "format:check": "prettier --check src tests scripts *.json *.cjs",
+    "verify:release": "node scripts/verify-release.mjs && node scripts/binary-smoke.mjs && node scripts/portable-binary-smoke.mjs",
+    "delivery": "node scripts/prepare-delivery.mjs",
+    "smoke:resilience": "node scripts/resilience-smoke.mjs",
+    "smoke:contacts": "node scripts/contact-sheet-smoke.mjs",
+    "stress:archive": "node scripts/archive-stress.mjs"
+  },
+  "config": {
+    "forge": "./forge.config.cjs"
+  },
+  "dependencies": {
+    "@fontsource/noto-sans-sc": "5.3.1",
+    "@fontsource/noto-serif-sc": "5.3.1",
+    "ajv": "8.20.0",
+    "fast-json-patch": "3.1.1",
+    "fflate": "0.8.3",
+    "pdf-lib": "1.17.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "8.0.1",
+    "@electron-forge/maker-squirrel": "8.0.1",
+    "@electron-forge/plugin-fuses": "8.0.1",
+    "@electron/fuses": "2.1.3",
+    "@playwright/test": "1.64.1",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "electron": "44.7.2",
+    "esbuild": "0.28.2",
+    "prettier": "3.9.10",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  }
+}

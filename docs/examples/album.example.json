@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "id": "1af8cec7-9ae3-4b29-b240-20c8c7ae7be5",
+  "revision": 0,
+  "name": "明日世界",
+  "updatedAt": "2026-10-15T02:39:35.101Z",
+  "size": {
+    "width": 419.528,
+    "height": 595.276
+  },
+  "theme": "live",
+  "pages": [
+    {
+      "id": "5fae3923-ba34-45cf-9e0e-2b43fb35de0e",
+      "role": "cover",
+      "background": "#202723",
+      "elements": [
+        {
+          "id": "dd026f91-1530-4b3a-9f1d-87c176e27de5",
+          "type": "image",
+          "name": "示例舞台照片.jpg",
+          "assetId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "frame": {
+            "x": 0,
+            "y": 0,
+            "width": 419.528,
+            "height": 410.7404399999999
+          },
+          "role": "photo",
+          "fit": "cover",
+          "crop": {
+            "x": 0,
+            "y": 0,
+            "w": 1,
+            "h": 1
+          },
+          "rotation": 0,
+          "opacity": 1,
+          "locked": false,
+          "visible": true
+        },
+        {
+          "id": "f58409a1-50b3-44b4-992e-41b063fd2278",
+          "type": "text",
+          "name": "明日世界",
+          "text": "明日世界",
+          "frame": {
+            "x": 28,
+            "y": 446.457,
+            "width": 363.528,
+            "height": 107.14967999999999
+          },
+          "rotation": 0,
+          "opacity": 1,
+          "locked": false,
+          "visible": true,
+          "style": {
+            "fontSize": 32,
+            "color": "#ead290",
+            "align": "left",
+            "lineHeight": 1.45,
+            "bold": true,
+            "fontFamily": "Noto Sans SC",
+            "letterSpacing": 0
+          }
+        },
+        {
+          "id": "170f8f91-d5dd-499d-ab6d-25fbdbcf47e7",
+          "type": "text",
+          "name": "北京",
+          "text": "北京",
+          "frame": {
+            "x": 28,
+            "y": 559.276,
+            "width": 363.528,
+            "height": 20
+          },
+          "rotation": 0,
+          "opacity": 1,
+          "locked": false,
+          "visible": true,
+          "style": {
+            "fontSize": 10,
+            "color": "#ead290",
+            "align": "left",
+            "lineHeight": 1.45,
+            "bold": false,
+            "fontFamily": "Noto Sans SC",
+            "letterSpacing": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "e30b28cf-f5e3-4b8f-ab8c-262538e6aa6e",
+      "role": "content",
+      "background": "#202723",
+      "elements": [
+        {
+          "id": "8e806295-d934-4751-8722-f67fb7daf3ee",
+          "type": "image",
+          "name": "示例舞台照片.jpg",
+          "assetId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "frame": {
+            "x": 28,
+            "y": 28,
+            "width": 363.528,
+            "height": 477.27599999999995
+          },
+          "role": "photo",
+          "fit": "cover",
+          "crop": {
+            "x": 0,
+            "y": 0,
+            "w": 1,
+            "h": 1
+          },
+          "rotation": 0,
+          "opacity": 1,
+          "locked": false,
+          "visible": true
+        },
+        {
+          "id": "24a5e246-07ce-4257-88a3-fd33bce0eac3",
+          "type": "text",
+          "name": "回忆文字",
+          "text": "",
+          "frame": {
+            "x": 28,
+            "y": 529.276,
+            "width": 363.528,
+            "height": 36
+          },
+          "rotation": 0,
+          "opacity": 1,
+          "locked": false,
+          "visible": true,
+          "style": {
+            "fontSize": 11,
+            "color": "#f4eedc",
+            "align": "left",
+            "lineHeight": 1.45,
+            "bold": false,
+            "fontFamily": "Noto Sans SC",
+            "letterSpacing": 0
+          }
+        },
+        {
+          "id": "b3944f3f-b486-42f6-9bbe-13837c5618a4",
+          "type": "image",
+          "name": "示例星星贴纸.png",
+          "assetId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "frame": {
+            "x": 335,
+            "y": 430,
+            "width": 45,
+            "height": 45
+          },
+          "role": "sticker",
+          "fit": "contain",
+          "crop": {
+            "x": 0,
+            "y": 0,
+            "w": 1,
+            "h": 1
+          },
+          "rotation": -8,
+          "opacity": 1,
+          "locked": false,
+          "visible": true
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "name": "示例舞台照片.jpg",
+      "mime": "image/jpeg",
+      "width": 3000,
+      "height": 4000,
+      "bytes": 1500000
+    },
+    {
+      "id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "name": "示例星星贴纸.png",
+      "mime": "image/png",
+      "width": 800,
+      "height": 800,
+      "bytes": 80000
+    }
+  ],
+  "annotations": [
+    {
+      "id": "785ccf2c-f3d9-4927-a609-343dc52b9771",
+      "pageId": "5fae3923-ba34-45cf-9e0e-2b43fb35de0e",
+      "elementId": "f58409a1-50b3-44b4-992e-41b063fd2278",
+      "text": "标题改成暖黄色。",
+      "status": "pending",
+      "message": ""
+    }
+  ]
+}
