@@ -73,5 +73,5 @@ npm run smoke
 npm run smoke:resources
 ```
 
-文档版本：v0.8，2026-10-15。当前软件暂用“拾页 / Memorybook”名称，正式店铺名称与发货云盘链接由售卖方填写。
+文档版本：v0.8，2026-10-15。当前软件暂用“拾页 / Memorybook”名称。
 
