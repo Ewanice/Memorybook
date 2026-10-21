@@ -52,7 +52,13 @@ import {
 } from "../infrastructure/preflight";
 import { AiPreferences } from "../infrastructure/ai-preferences";
 import { propose, clearProviderCache } from "../infrastructure/ai-provider";
-import { createAlbum, layoutCatalog } from "../domain/templates";
+import {
+  createAlbum,
+  layoutCatalog,
+  layoutCapacity,
+} from "../domain/templates";
+import { coverCatalog } from "../domain/covers";
+import { sizes } from "../domain/model";
 import { GenerationCoordinator } from "../application/generation";
 import { assertLayout } from "../domain/layout-validation";
 import { ResourceLibrary } from "../infrastructure/resource-library";
@@ -753,7 +759,12 @@ async function start(): Promise<void> {
     cleanupOriginals: async () => {
       if (service.hasBusyTask() || generation.state.status === "running")
         throw new DomainError("请先等待当前任务完成。");
-      return cleanupOriginals(store, assets, imported.keys());
+      return cleanupOriginals(store, assets, [
+        ...imported.keys(),
+        ...(store.settings().homeBackground
+          ? [store.settings().homeBackground!]
+          : []),
+      ]);
     },
     backupWorkspace: async () => {
       const result = await dialog.showOpenDialog(window, {
@@ -878,6 +889,7 @@ async function start(): Promise<void> {
     resources: async () => {
       const content = {
         layouts: resources.layouts(),
+        hiddenLayoutIds: resources.hiddenLayouts(),
         stickers: resources.stickers(),
         phrases: [] as string[],
         phrasePath: resources.phrasePath,
@@ -922,6 +934,20 @@ async function start(): Promise<void> {
       resources.saveLayout(template);
     },
     removeLayout: async (id) => resources.removeLayout(id),
+    restoreLayouts: async () => resources.restoreLayouts(),
+    chooseHomeBackground: async () => {
+      const result = await dialog.showOpenDialog(window, {
+        title: "选择首页背景",
+        properties: ["openFile"],
+        filters: [{ name: "图片", extensions: ["jpg", "jpeg", "png", "webp"] }],
+      });
+      if (result.canceled || !result.filePaths[0]) return store.settings();
+      const image = await assets.import(result.filePaths[0]);
+      return store.saveSettings({
+        ...store.settings(),
+        homeBackground: image.id,
+      });
+    },
     codexStatus: () => generation.connect(),
     reconnectCodex: () => generation.reconnect(),
     codexPreferences: async () => generation.preferences(),
@@ -982,17 +1008,39 @@ async function start(): Promise<void> {
               })
             : [],
           customLayouts: resources.layouts(),
+          hiddenLayoutIds: resources.hiddenLayouts(),
         };
         if (input.options?.generator === "codex") {
           const mode = input.options.codexMode ?? "templates";
           if (mode !== "templates" && mode !== "creative")
             throw new DomainError("Codex 生成模式无效。");
+          const size = input.options.customSize ?? sizes[input.pageSize];
+          const coverId =
+            input.options.coverLayoutId ??
+            "builtin-cover-" + input.options.coverMode;
+          const coverTemplate = [
+            ...coverCatalog(
+              size,
+              input.theme,
+              content.customLayouts,
+              content.hiddenLayoutIds,
+            ),
+            ...layoutCatalog(
+              size,
+              input.theme,
+              content.customLayouts,
+              content.hiddenLayoutIds,
+            ),
+          ].find((t) => t.id === coverId);
           const base = createAlbum(
             input.name,
             input.city,
             input.theme,
             input.pageSize,
-            photoAssets.slice(0, 1),
+            photoAssets.slice(
+              0,
+              coverTemplate ? layoutCapacity(coverTemplate) : 0,
+            ),
             { ...input.options, generator: "local", layout: "auto" },
             content,
           );
@@ -1001,7 +1049,12 @@ async function start(): Promise<void> {
             photoAssets,
             content.stickers,
             content.phrases,
-            layoutCatalog(base.size, base.theme, content.customLayouts),
+            layoutCatalog(
+              base.size,
+              base.theme,
+              content.customLayouts,
+              content.hiddenLayoutIds,
+            ),
             mode,
             async () => {
               if (mode !== "creative") return [];

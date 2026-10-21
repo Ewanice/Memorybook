@@ -6,7 +6,11 @@ export function assertLayout(input: unknown): asserts input is LayoutTemplate {
     throw new DomainError("排版数据无效。");
   const t = input as LayoutTemplate;
   if (
-    Object.keys(t).sort().join() !== "id,name,page,phraseIds,size" ||
+    Object.keys(t)
+      .filter((k) => k !== "kind")
+      .sort()
+      .join() !== "id,name,page,phraseIds,size" ||
+    (t.kind !== undefined && t.kind !== "cover") ||
     typeof t.id !== "string" ||
     !/^[\w-]{1,80}$/.test(t.id) ||
     typeof t.name !== "string" ||
@@ -38,6 +42,7 @@ export function assertLayout(input: unknown): asserts input is LayoutTemplate {
     annotations: [],
   });
   if (
+    t.kind !== "cover" &&
     !t.page.elements.some((e) => e.type === "photoSlot" && e.role !== "sticker")
   )
     throw new DomainError("自动排版至少需要一个照片位置。");
@@ -50,6 +55,12 @@ export function assertLayout(input: unknown): asserts input is LayoutTemplate {
     )
   )
     throw new DomainError("短语位置引用无效。");
+  for (const role of ["封面标题", "城市角标"])
+    if (
+      t.page.elements.filter((e) => e.type === "text" && e.name === role)
+        .length > 1
+    )
+      throw new DomainError("封面标题与城市角标各只能设置一个。");
   for (const e of t.page.elements) {
     const f = e.frame,
       r = (e.rotation * Math.PI) / 180;

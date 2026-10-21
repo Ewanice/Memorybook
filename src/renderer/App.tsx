@@ -11,12 +11,11 @@ import type {
 import { imageElement, textElement, elementPatch } from "../domain/model";
 import {
   createPage,
-  templateLabels,
   suggestedPageCount,
   defaultCreateOptions,
   layoutCatalog,
+  layoutCapacity,
   type CreateOptions,
-  type TemplateName,
 } from "../domain/templates";
 import { Scene, assetUrl, measureText, ensureFonts } from "./Scene";
 import { Canvas } from "./Canvas";
@@ -46,6 +45,9 @@ import { reflowPage } from "../domain/reflow";
 import { instantiateLayout } from "../domain/layouts";
 import { PaginationControls } from "./PaginationControls";
 import { sizes, id } from "../domain/model";
+import { coverCatalog, instantiateCover } from "../domain/covers";
+import { themeVariables } from "./AppearanceSettings";
+import { EditorActions } from "./EditorActions";
 import "./styles.css";
 
 const api = window.memorybook;
@@ -175,15 +177,31 @@ export function App() {
       );
   }, []);
   async function beginNew() {
-    setResources(await api.resources());
+    const library = await api.resources();
+    setResources(library);
     setAssets([]);
-    setStickerIds([]);
+    setStickerIds(library.stickers.map((a) => a.id));
     setName("");
     setCity("");
     setNewOpen(true);
     setNewOptions((value) => ({
       ...value,
       layout: "random",
+      coverLayoutId:
+        [
+          ...coverCatalog(
+            sizes[data?.settings.pageSize ?? "a5"],
+            theme,
+            library.layouts,
+            library.hiddenLayoutIds,
+          ),
+          ...layoutCatalog(
+            undefined,
+            theme,
+            library.layouts,
+            library.hiddenLayoutIds,
+          ),
+        ][0]?.id ?? "",
       randomSeed: crypto.getRandomValues(new Uint32Array(1))[0]!,
     }));
     void api
@@ -361,6 +379,22 @@ export function App() {
       const targets =
         page?.elements.filter((e) => selectedIds.includes(e.id) && !e.locked) ??
         [];
+      if (
+        page &&
+        element &&
+        !element.locked &&
+        (event.ctrlKey || event.metaKey) &&
+        ["[", "]"].includes(event.key)
+      ) {
+        event.preventDefault();
+        commit({
+          type: "layer",
+          pageId: page.id,
+          elementId: element.id,
+          direction: event.key === "]" ? "up" : "down",
+        });
+        return;
+      }
       if (
         page &&
         (event.ctrlKey || event.metaKey) &&
@@ -708,7 +742,35 @@ export function App() {
   }
   function chooseLayout(template: LayoutTemplate) {
     if (!album || !page) return;
-    if (applyLayout && page.role === "content") {
+    if (applyLayout && page.role === "cover") {
+      const photos = page.elements
+        .filter((e) => e.type === "image" && e.role === "photo")
+        .map((e) =>
+          album.assets.find((a) => e.type === "image" && a.id === e.assetId)!,
+        )
+        .filter(Boolean);
+      const stickers = page.elements
+        .filter((e) => e.type === "image" && e.role === "sticker")
+        .map((e) =>
+          album.assets.find((a) => e.type === "image" && a.id === e.assetId)!,
+        )
+        .filter(Boolean);
+      const city = page.elements.find(
+        (e) => e.type === "text" && e.name === "城市角标",
+      );
+      const after = instantiateCover(
+        template,
+        album.size,
+        photos,
+        stickers,
+        resources?.phrases ?? [],
+        album.name,
+        city?.type === "text" ? city.text : "",
+        true,
+      );
+      after.id = page.id;
+      setLayoutPreview({ before: page, after: [after] });
+    } else if (applyLayout && page.role === "content") {
       try {
         setLayoutPreview({
           before: page,
@@ -758,6 +820,23 @@ export function App() {
         )}
       </main>
     );
+  const availableLayouts = layoutCatalog(
+    newOptions.customSize ?? sizes[data.settings.pageSize],
+    theme,
+    resources?.layouts,
+    resources?.hiddenLayoutIds,
+  );
+  const availableCovers = coverCatalog(
+    newOptions.customSize ?? sizes[data.settings.pageSize],
+    theme,
+    resources?.layouts,
+    resources?.hiddenLayoutIds,
+  );
+  const selectedCover = [...availableCovers, ...availableLayouts].find(
+    (t) =>
+      t.id ===
+      (newOptions.coverLayoutId ?? "builtin-cover-" + newOptions.coverMode),
+  );
   const notice = error && (
     <div className="notice" role="status">
       <span>{error}</span>
@@ -771,14 +850,30 @@ export function App() {
       <div
         className="app"
         style={
-          { "--ui-scale": data.settings.zoom / 100 } as React.CSSProperties
+          {
+            "--ui-scale": data.settings.zoom / 100,
+            ...themeVariables(data.settings.accentColor),
+          } as React.CSSProperties
         }
       >
         {!album ? (
-          <>
+          <div
+            className="home-surface"
+            style={
+              {
+                "--home-background": data.settings.homeBackground
+                  ? `url("${assetUrl(data.settings.homeBackground, "preview")}")`
+                  : "none",
+                "--home-opacity": data.settings.homeBackgroundOpacity ?? 0.16,
+                "--home-scale": data.settings.homeBackgroundScale ?? 1,
+              } as React.CSSProperties
+            }
+          >
+            <div className="home-background" aria-hidden="true" />
             <header className="home-header">
               <div className="brand">
-                拾页<span>MEMORYBOOK</span>
+                {data.settings.displayName ?? "拾页"}
+                <span>MEMORYBOOK</span>
               </div>
               <div className="button-row">
                 {templateDraft && (
@@ -965,16 +1060,19 @@ export function App() {
                   });
                 }}
                 editLayout={(template) =>
-                  setTemplateEditor(
-                    template.id.startsWith("builtin-")
-                      ? {
-                          ...structuredClone(template),
-                          id: id(),
-                          name: template.name + " · 我的排版",
-                        }
-                      : structuredClone(template),
-                  )
+                  setTemplateEditor(structuredClone(template))
                 }
+                restoreLayouts={() => {
+                  if (
+                    window.confirm(
+                      "恢复默认排版和默认封面？自定义排版会保留，内置排版的修改将被重置。",
+                    )
+                  )
+                    void run(async () => {
+                      await api.restoreLayouts();
+                      setResources(await api.resources());
+                    });
+                }}
                 removeLayout={(key) => {
                   if (window.confirm("删除此排版？已有纪念册不受影响。"))
                     void run(async () => {
@@ -1008,7 +1106,7 @@ export function App() {
                 open={() => void run(() => api.openPhrases())}
               />
             </main>
-          </>
+          </div>
         ) : (
           page && (
             <>
@@ -1258,6 +1356,21 @@ export function App() {
                         .length || ""}
                     </button>
                   </div>
+                  <EditorActions
+                    page={page}
+                    ids={selectedIds}
+                    disabled={locked || preview}
+                    edit={commit}
+                    onSelect={(ids) => {
+                      setSelectedIds(ids);
+                      setPrimary(ids[0] ?? "");
+                    }}
+                    onCrop={setCropElement}
+                    onCover={() => {
+                      setApplyLayout(true);
+                      setDrawer("templates");
+                    }}
+                  />
                   {task.status !== "idle" && (
                     <div className={`task-banner ${task.status}`}>
                       <span>{task.message}</span>
@@ -1349,55 +1462,32 @@ export function App() {
                             <input
                               type="checkbox"
                               checked={applyLayout}
-                              disabled={page.role !== "content"}
+                              disabled={page.role === "backCover"}
                               onChange={(event) =>
                                 setApplyLayout(event.target.checked)
                               }
                             />
-                            套用到当前页（替换当前元素）
+                            {page.role === "cover"
+                              ? "套用到当前封面（替换当前元素）"
+                              : "套用到当前页（替换当前元素）"}
                           </label>
                           <div className="template-grid">
-                            {(
-                              Object.keys(templateLabels) as TemplateName[]
-                            ).map((layout) => (
-                              <button
-                                disabled={locked}
-                                key={layout}
-                                onClick={() =>
-                                  chooseLayout(
-                                    layoutCatalog(album.size, album.theme).find(
-                                      (t) => t.id === "builtin-" + layout,
-                                    ) ?? {
-                                      id: "builtin-" + layout,
-                                      name: templateLabels[layout],
-                                      size: album.size,
-                                      page: createPage(
-                                        album.size,
-                                        album.theme,
-                                        layout,
-                                      ),
-                                      phraseIds: [],
-                                    },
+                            {[
+                              ...(applyLayout && page.role === "cover"
+                                ? coverCatalog(
+                                    album.size,
+                                    album.theme,
+                                    resources?.layouts,
+                                    resources?.hiddenLayoutIds,
                                   )
-                                }
-                              >
-                                <span className={`layout-preview ${layout}`}>
-                                  <Scene
-                                    album={album}
-                                    page={createPage(
-                                      album.size,
-                                      album.theme,
-                                      layout,
-                                    )}
-                                    variant="thumbnail"
-                                  />
-                                </span>
-                                {templateLabels[layout]}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="template-grid">
-                            {resources?.layouts.map((template) => (
+                                : []),
+                              ...layoutCatalog(
+                                album.size,
+                                album.theme,
+                                resources?.layouts,
+                                resources?.hiddenLayoutIds,
+                              ),
+                            ].map((template) => (
                               <button
                                 key={template.id}
                                 disabled={locked}
@@ -1411,8 +1501,29 @@ export function App() {
                                   />
                                 </span>
                                 {template.name}
+                                {template.kind === "cover" && (
+                                  <small>封面</small>
+                                )}
                               </button>
                             ))}
+                            <button
+                              disabled={locked}
+                              onClick={() =>
+                                chooseLayout({
+                                  id: "blank",
+                                  name: "空白页",
+                                  size: album.size,
+                                  page: createPage(
+                                    album.size,
+                                    album.theme,
+                                    "blank",
+                                  ),
+                                  phraseIds: [],
+                                })
+                              }
+                            >
+                              空白页
+                            </button>
                           </div>
                           <button
                             className="wide"
@@ -1514,6 +1625,7 @@ export function App() {
                     </div>
                   )}
                   <SelectionTools
+                    size={album.size}
                     page={page}
                     ids={selectedIds}
                     disabled={locked}
@@ -1795,29 +1907,48 @@ export function App() {
                       现场档案<small>深色底片 · 暖黄文字</small>
                     </button>
                   </div>
-                  <details>
-                    <summary>生成选项</summary>
+                  <fieldset className="cover-selection">
+                    <legend>封面排版</legend>
                     <label className="field">
-                      封面方式
+                      从排版库选择
                       <select
-                        value={newOptions.coverMode}
+                        aria-label="封面排版"
+                        value={
+                          newOptions.coverLayoutId ??
+                          "builtin-cover-" + newOptions.coverMode
+                        }
                         onChange={(event) =>
                           setNewOptions({
                             ...newOptions,
-                            coverMode: event.target
-                              .value as CreateOptions["coverMode"],
+                            coverLayoutId: event.target.value,
+                            coverMode:
+                              event.target.value === "builtin-cover-complete"
+                                ? "complete"
+                                : "photo",
                           })
                         }
                       >
-                        <option value="photo">
-                          照片封面 · 标题与角标可编辑
-                        </option>
-                        <option value="complete">
-                          完整封面图片 · 不重复叠字
-                        </option>
+                        <option value="">空白封面</option>
+                        <optgroup label="封面排版">
+                          {availableCovers.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name} · 封面
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="用内页排版制作封面">
+                          {availableLayouts.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}
+                            </option>
+                          ))}
+                        </optgroup>
                       </select>
                     </label>
-                  </details>
+                    <p className="muted">
+                      标题、角标与每个元素生成后都可编辑；默认完整图片封面含顶部居中文字。
+                    </p>
+                  </fieldset>
                   <p className="muted">
                     {newOptions.customSize
                       ? `${Math.round((newOptions.customSize.width * 25.4) / 72)} × ${Math.round((newOptions.customSize.height * 25.4) / 72)} mm`
@@ -1831,6 +1962,8 @@ export function App() {
                       newOptions.layout,
                       newOptions.randomSeed,
                       resources?.layouts,
+                      resources?.hiddenLayoutIds,
+                      selectedCover ? layoutCapacity(selectedCover) : 0,
                     )}{" "}
                     页
                     {newOptions.generator === "codex"
@@ -1893,8 +2026,10 @@ export function App() {
                 </div>
               </div>
               <div className="generation-materials" inert={generating}>
-                <div className="section-label">
+                <div className="create-size-options">
                   <CustomSize value={newOptions} onChange={setNewOptions} />
+                </div>
+                <div className="section-label">
                   <h3>选择排版</h3>
                   <label className="check">
                     <input
@@ -1916,7 +2051,7 @@ export function App() {
                   </p>
                 )}
                 <p className="muted">
-                  全部 {11 + (resources?.layouts.length ?? 0)}{" "}
+                  全部 {availableLayouts.length}{" "}
                   个照片排版参与生成。每轮打乱后逐个使用，减少重复；自定义排版保存后自动加入。
                 </p>
                 <div className="composition-options composition-catalog">
@@ -1924,6 +2059,7 @@ export function App() {
                     newOptions.customSize ?? sizes[data.settings.pageSize],
                     theme,
                     resources?.layouts,
+                    resources?.hiddenLayoutIds,
                   ).map((t) => (
                     <div className="composition-card" key={t.id}>
                       <div>
@@ -2006,7 +2142,18 @@ export function App() {
                   <h3>
                     本次使用的贴纸 <small>{stickerIds.length} 张</small>
                   </h3>
-                  <span className="muted">可不选；有贴纸时按页轮流排入</span>
+                  <div className="button-row">
+                    <button
+                      onClick={() =>
+                        setStickerIds(
+                          resources?.stickers.map((a) => a.id) ?? [],
+                        )
+                      }
+                    >
+                      全选贴纸
+                    </button>
+                    <button onClick={() => setStickerIds([])}>清空选择</button>
+                  </div>
                 </div>
                 <div className="sticker-selection">
                   {resources?.stickers.map((a) => (
@@ -2127,9 +2274,15 @@ export function App() {
                 <button onClick={() => setLayoutPreview(null)}>取消</button>
               </header>
               <p className="muted">
-                保留照片、贴纸和文字。照片位置不足时自动拆成{" "}
-                {layoutPreview.after.length}{" "}
-                页；多余文字与贴纸保留原位置，请检查是否重叠。整次套用可以撤销。
+                {layoutPreview.before.role === "cover" ? (
+                  "替换封面的构图与文字样式，自动填入纪念册标题和角标。请检查照片和文字位置，确认后可整次撤销。"
+                ) : (
+                  <>
+                    保留照片、贴纸和文字。照片位置不足时自动拆成{" "}
+                    {layoutPreview.after.length}{" "}
+                    页；多余文字与贴纸保留原位置，请检查是否重叠。整次套用可以撤销。
+                  </>
+                )}
               </p>
               <div className="comparison-pages">
                 <div>

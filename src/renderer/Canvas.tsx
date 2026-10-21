@@ -333,8 +333,8 @@ export function Canvas({
         {selectionBox && (
           <rect
             {...selectionBox}
-            fill="#49765b18"
-            stroke="#49765b"
+            fill="var(--accent-soft, #49765b18)"
+            stroke="var(--accent, #49765b)"
             pointerEvents="none"
           />
         )}
@@ -349,7 +349,7 @@ export function Canvas({
                 key={id}
                 {...item.frame}
                 fill="none"
-                stroke="#49765b"
+                stroke="var(--accent, #49765b)"
                 strokeDasharray="3 2"
                 pointerEvents="none"
                 transform={`rotate(${item.rotation} ${item.frame.x + item.frame.width / 2} ${item.frame.y + item.frame.height / 2})`}
@@ -379,7 +379,7 @@ export function Canvas({
               width={el.frame.width}
               height={el.frame.height}
               fill="none"
-              stroke="#49765b"
+              stroke="var(--accent, #49765b)"
               strokeWidth="1.3"
               pointerEvents="none"
             />
@@ -392,7 +392,7 @@ export function Canvas({
                   height="8"
                   rx="1"
                   fill="#fff"
-                  stroke="#49765b"
+                  stroke="var(--accent, #49765b)"
                   style={{ cursor: "nwse-resize" }}
                   onPointerDown={(event) => begin(event, el, "resize")}
                 />
@@ -401,7 +401,7 @@ export function Canvas({
                   y1={el.frame.y}
                   x2={el.frame.x + el.frame.width / 2}
                   y2={el.frame.y - 18}
-                  stroke="#49765b"
+                  stroke="var(--accent, #49765b)"
                   strokeWidth="1"
                   pointerEvents="none"
                 />
@@ -411,7 +411,7 @@ export function Canvas({
                   cy={el.frame.y - 18}
                   r={4}
                   fill="#fff"
-                  stroke="#49765b"
+                  stroke="var(--accent, #49765b)"
                   style={{ cursor: "grab" }}
                   onPointerDown={(event) => begin(event, el, "rotate")}
                 />

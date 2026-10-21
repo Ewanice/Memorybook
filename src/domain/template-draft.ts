@@ -7,7 +7,11 @@ export function assertTemplateDraft(
   const t = value as LayoutTemplate;
   if (
     !t ||
-    Object.keys(t).sort().join() !== "id,name,page,phraseIds,size" ||
+    Object.keys(t)
+      .filter((k) => k !== "kind")
+      .sort()
+      .join() !== "id,name,page,phraseIds,size" ||
+    (t.kind !== undefined && t.kind !== "cover") ||
     typeof t.id !== "string" ||
     !/^[\w-]{1,80}$/.test(t.id) ||
     typeof t.name !== "string" ||

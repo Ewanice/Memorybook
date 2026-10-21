@@ -248,7 +248,7 @@ try {
       { theme, svg },
     );
     await page.screenshot({
-      path: resolve(`docs/layouts-${theme}-v140.png`),
+      path: resolve(`docs/layouts-${theme}.png`),
       fullPage: true,
     });
   }

@@ -1,6 +1,11 @@
 import type { AiRequest } from "../shared/ai-contract";
 import { applyProposal } from "../application/ai";
-import { DomainError, type Element } from "../domain/model";
+import {
+  DomainError,
+  type Element,
+  type TextOutline,
+  type ImageEffects,
+} from "../domain/model";
 import { requestModel } from "./ai-transport";
 import type { AiConfig } from "../domain/model";
 import Ajv from "ajv";
@@ -40,8 +45,69 @@ const resultSchema = {
               "fontFamily",
               "letterSpacing",
               "crop",
+              "outline",
+              "effects",
             ],
             properties: {
+              outline: {
+                anyOf: [
+                  { type: "null" },
+                  {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["enabled", "color", "width"],
+                    properties: {
+                      enabled: { type: "boolean" },
+                      color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
+                      width: { type: "number", minimum: 0.2, maximum: 8 },
+                    },
+                  },
+                ],
+              },
+              effects: {
+                anyOf: [
+                  { type: "null" },
+                  {
+                    type: "object",
+                    additionalProperties: false,
+                    required: [
+                      "shape",
+                      "edgeSize",
+                      "border",
+                      "borderWidth",
+                      "borderColor",
+                    ],
+                    properties: {
+                      shape: {
+                        type: "string",
+                        enum: [
+                          "rectangle",
+                          "rounded",
+                          "ellipse",
+                          "arch",
+                          "ticket",
+                          "torn",
+                          "scallop",
+                        ],
+                      },
+                      edgeSize: { type: "number", minimum: 0, maximum: 24 },
+                      border: {
+                        type: "string",
+                        enum: ["none", "solid", "dashed", "double", "polaroid"],
+                      },
+                      borderWidth: {
+                        type: "number",
+                        minimum: 0.2,
+                        maximum: 16,
+                      },
+                      borderColor: {
+                        type: "string",
+                        pattern: "^#[0-9a-fA-F]{6}$",
+                      },
+                    },
+                  },
+                ],
+              },
               x: { type: ["number", "null"] },
               y: { type: ["number", "null"] },
               width: { type: ["number", "null"] },
@@ -86,6 +152,8 @@ const resultSchema = {
   },
 };
 type Changes = {
+  outline: TextOutline | null;
+  effects: ImageEffects | null;
   x: number | null;
   y: number | null;
   width: number | null;
@@ -210,6 +278,9 @@ export async function propose(
       for (const key of ["rotation", "opacity"] as const)
         if (c[key] !== null) el[key] = c[key];
       if (el.type === "text") {
+        if (c.outline !== null) el.style.outline = c.outline;
+        if (c.effects !== null)
+          throw new DomainError("模型对文字元素修改图片效果。");
         if (c.fontFamily !== null && !allowedFonts.includes(c.fontFamily))
           throw new DomainError("模型选择了不可用字体。");
         if (c.text !== null) el.text = c.text;
@@ -233,12 +304,14 @@ export async function propose(
           c.bold,
           c.fontFamily,
           c.letterSpacing,
+          c.outline,
         ].some((v) => v !== null)
       )
         throw new DomainError("模型对非文字元素修改文字属性。");
       if (el.type === "image" && c.crop !== null) el.crop = c.crop;
       else if (c.crop !== null)
         throw new DomainError("模型对非图片元素修改裁切。");
+      if (el.type !== "text" && c.effects !== null) el.effects = c.effects;
       allResults.push({
         annotationId: item.annotationId,
         status: item.status,

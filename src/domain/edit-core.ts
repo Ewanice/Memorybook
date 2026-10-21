@@ -100,8 +100,8 @@ export function applyEditCore(
           ...(current.type === "text"
             ? ["text", "style"]
             : current.type === "image"
-              ? ["assetId", "fit", "crop"]
-              : []),
+              ? ["assetId", "fit", "crop", "effects"]
+              : ["effects"]),
         ]);
         if (
           !edit.patch ||
@@ -138,6 +138,7 @@ export function applyEditCore(
           throw new DomainError("照片槽或素材无效。");
         page.elements[index] = {
           ...imageElement(asset, slot.frame, slot.role ?? "photo"),
+          ...(slot.effects ? { effects: structuredClone(slot.effects) } : {}),
           id: slot.id,
           rotation: slot.rotation,
           opacity: slot.opacity,

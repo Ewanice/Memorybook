@@ -10,6 +10,7 @@ import type {
 import type { CreateOptions } from "../domain/templates";
 export type ImportResult = { assets: Asset[]; failures: string[] };
 export type LibraryContent = {
+  hiddenLayoutIds?: string[];
   layouts: import("../domain/layouts").LayoutTemplate[];
   stickers: Asset[];
   phrases: string[];
@@ -78,6 +79,8 @@ export interface DesktopApi {
     template: import("../domain/layouts").LayoutTemplate,
   ): Promise<void>;
   removeLayout(id: string): Promise<void>;
+  restoreLayouts(): Promise<void>;
+  chooseHomeBackground(): Promise<Settings>;
   codexStatus(): Promise<import("../infrastructure/codex-bridge").CodexStatus>;
   reconnectCodex(): Promise<
     import("../infrastructure/codex-bridge").CodexStatus

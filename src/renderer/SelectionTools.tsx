@@ -1,11 +1,13 @@
 import type { Element, Edit, Page } from "../domain/model";
 export function SelectionTools({
   page,
+  size: pageSize,
   ids,
   disabled,
   edit,
 }: {
   page: Page;
+  size: { width: number; height: number };
   ids: string[];
   disabled: boolean;
   edit: (edit: Edit) => void;
@@ -17,8 +19,14 @@ export function SelectionTools({
   ) => {
     const size = axis === "x" ? "width" : "height";
     const sorted = [...elements].sort((a, b) => a.frame[axis] - b.frame[axis]);
-    const start = Math.min(...elements.map((e) => e.frame[axis])),
-      end = Math.max(...elements.map((e) => e.frame[axis] + e.frame[size]));
+    const start =
+        elements.length === 1
+          ? 28
+          : Math.min(...elements.map((e) => e.frame[axis])),
+      end =
+        elements.length === 1
+          ? pageSize[axis === "x" ? "width" : "height"] - 28
+          : Math.max(...elements.map((e) => e.frame[axis] + e.frame[size]));
     const gap =
       (end - start - elements.reduce((n, e) => n + e.frame[size], 0)) /
       Math.max(1, elements.length - 1);
@@ -58,14 +66,14 @@ export function SelectionTools({
       <select
         aria-label="对齐多个元素"
         value=""
-        disabled={disabled || elements.length < 2}
+        disabled={disabled}
         onChange={(e) => {
           const [axis, mode] = e.target.value.split(":");
           align(axis as "x" | "y", mode as "start");
         }}
       >
         <option value="" disabled>
-          对齐与分布
+          {elements.length === 1 ? "对齐到页面" : "对齐与分布"}
         </option>
         <option value="x:start">左对齐</option>
         <option value="x:center">水平居中</option>

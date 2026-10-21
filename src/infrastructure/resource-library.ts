@@ -6,6 +6,7 @@ import type { Asset } from "../domain/model";
 import { DomainError } from "../domain/model";
 import { health } from "./health";
 import { writeAtomic } from "./atomic-file";
+import { templateLabels, layoutCatalog } from "../domain/templates";
 
 export function parsePhrases(text: string): string[] {
   const lines = text
@@ -156,28 +157,89 @@ export class ResourceLibrary {
       "layout-library",
       (value: unknown): value is LayoutTemplate => {
         assertLayout(value);
+        if (
+          value.id.startsWith("builtin-") &&
+          !this.builtinIds().includes(value.id)
+        )
+          throw new DomainError("内置排版编号损坏。");
         return true;
       },
-    ).slice(0, 50);
+    ).slice(0, 50 + this.builtinIds().length);
   }
   saveLayout(template: LayoutTemplate): void {
     assertLayout(template);
-    if (template.id.startsWith("builtin-"))
-      throw new DomainError("内置排版请另存为自己的排版。");
+    if (
+      template.id.startsWith("builtin-") &&
+      !this.builtinIds().includes(template.id)
+    )
+      throw new DomainError("内置排版编号无效。");
+    if (template.id.startsWith("builtin-cover-") && template.kind !== "cover")
+      throw new DomainError("默认封面必须保留封面用途。");
+    if (
+      template.id.startsWith("builtin-") &&
+      !template.id.startsWith("builtin-cover-") &&
+      template.kind === "cover"
+    )
+      throw new DomainError("内置内页请复制后另存为封面。");
     const all = this.layouts(),
       index = all.findIndex((t) => t.id === template.id);
     if (index < 0) all.push(template);
     else all[index] = template;
-    if (all.length > 50) throw new DomainError("最多保存 50 个自定义排版。");
+    if (all.filter((t) => !t.id.startsWith("builtin-")).length > 50)
+      throw new DomainError("最多保存 50 个自定义排版。");
     this.values.setValue("layout-library", JSON.stringify(all));
   }
   removeLayout(id: string): void {
+    const remaining = layoutCatalog(
+      undefined,
+      undefined,
+      this.layouts(),
+      this.hiddenLayouts(),
+    );
+    if (remaining.some((t) => t.id === id) && remaining.length === 1)
+      throw new DomainError("至少保留一个内页排版，请先添加新排版再删除。");
+    if (this.builtinIds().includes(id)) {
+      this.values.setValue(
+        "hidden-layouts",
+        JSON.stringify([...new Set([...this.hiddenLayouts(), id])]),
+      );
+      return;
+    }
     const all = this.layouts();
     if (!all.some((t) => t.id === id)) throw new DomainError("排版不存在。");
     this.values.setValue(
       "layout-library",
       JSON.stringify(all.filter((t) => t.id !== id)),
     );
+  }
+  private builtinIds(): string[] {
+    return [
+      ...Object.keys(templateLabels)
+        .filter((n) => n !== "blank" && n !== "ending")
+        .map((n) => "builtin-" + n),
+      "builtin-cover-photo",
+      "builtin-cover-complete",
+    ];
+  }
+  hiddenLayouts(): string[] {
+    return this.readEntries(
+      this.values.getValue("hidden-layouts"),
+      "hidden-layouts",
+      (v): v is string => {
+        if (typeof v !== "string" || !this.builtinIds().includes(v))
+          throw new DomainError("隐藏排版记录损坏。");
+        return true;
+      },
+    );
+  }
+  restoreLayouts(): void {
+    this.values.setValue(
+      "layout-library",
+      JSON.stringify(
+        this.layouts().filter((t) => !t.id.startsWith("builtin-")),
+      ),
+    );
+    this.values.setValue("hidden-layouts", "[]");
   }
   async phraseDocument(): Promise<{ text: string; hash: string }> {
     return this.readPhraseText();

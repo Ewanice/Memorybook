@@ -186,6 +186,8 @@ test("AI 分组失败后可复用已完成组，并能选择已导入字体", as
         "fontFamily",
         "letterSpacing",
         "crop",
+        "outline",
+        "effects",
       ].map((k) => [k, null]),
     );
     const result = {

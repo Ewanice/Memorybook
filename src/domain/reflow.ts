@@ -1,8 +1,10 @@
 import type { Album, Page, ImageElement } from "./model";
 import { DomainError } from "./model";
+import { defaultImageEffects } from "./model";
 import type { LayoutTemplate } from "./layouts";
 import { instantiateLayout } from "./layouts";
 import { layoutCapacity } from "./templates";
+import { scaleImageEffects } from "./image-effects";
 
 export function reflowPage(
   album: Album,
@@ -48,6 +50,9 @@ export function reflowPage(
                   ...structuredClone(original),
                   frame: element.frame,
                   rotation: element.rotation,
+                  effects: structuredClone(
+                    element.effects ?? defaultImageEffects,
+                  ),
                 },
               ]
             : [];
@@ -86,6 +91,12 @@ export function reflowPage(
             height: slot.frame.height * sy,
           },
           rotation: slot.rotation,
+          effects: scaleImageEffects(
+            slot.type === "photoSlot"
+              ? (slot.effects ?? defaultImageEffects)
+              : defaultImageEffects,
+            Math.min(sx, sy),
+          ),
         });
     }
     result.push(next);

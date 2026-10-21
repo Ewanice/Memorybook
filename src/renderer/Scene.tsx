@@ -1,5 +1,8 @@
 import type { Album, Element, Page } from "../domain/model";
-import { textLines, type MeasureText } from "../domain/text";
+import { textLines, textInset, type MeasureText } from "../domain/text";
+import { defaultImageEffects } from "../domain/model";
+import { imageContentFrame } from "../domain/image-effects";
+import { ImageAppearance } from "./ImageAppearance";
 import { PageBackground } from "./PageBackground";
 import { loadImportedFonts, failedFonts } from "./fonts";
 import { useState, useEffect } from "react";
@@ -57,37 +60,49 @@ export function SceneElement({
   const { frame: f } = element;
   const transform = `rotate(${element.rotation} ${f.x + f.width / 2} ${f.y + f.height / 2})`;
   if (!element.visible) return null;
-  if (element.type === "photoSlot")
+  if (element.type === "photoSlot") {
+    const slotFrame = imageContentFrame(
+      f,
+      element.effects ?? defaultImageEffects,
+    );
     return (
-      <g transform={transform}>
-        <rect
-          x={f.x}
-          y={f.y}
-          width={f.width}
-          height={f.height}
-          fill="#dbe2d6"
-          stroke="#a0b292"
-          strokeDasharray="4 4"
-        />
-        <text
-          x={f.x + f.width / 2}
-          y={f.y + f.height / 2}
-          textAnchor="middle"
-          fontSize={11}
-          fill="#708665"
+      <g transform={transform} opacity={element.opacity}>
+        <ImageAppearance
+          frame={f}
+          effects={element.effects}
+          identifier={element.id}
         >
-          {element.role === "sticker" ? "＋ 贴纸" : "＋ 添加照片"}
-        </text>
+          <rect
+            x={slotFrame.x}
+            y={slotFrame.y}
+            width={slotFrame.width}
+            height={slotFrame.height}
+            fill="#dbe2d6"
+            stroke="#a0b292"
+            strokeDasharray="4 4"
+          />
+          <text
+            x={f.x + f.width / 2}
+            y={f.y + f.height / 2}
+            textAnchor="middle"
+            fontSize={11}
+            fill="#708665"
+          >
+            {element.role === "sticker" ? "＋ 贴纸" : "＋ 添加照片"}
+          </text>
+        </ImageAppearance>
       </g>
     );
+  }
   if (element.type === "text") {
     const style = element.style;
+    const inset = textInset(element);
     const x =
       style.align === "center"
         ? f.x + f.width / 2
         : style.align === "right"
-          ? f.x + f.width
-          : f.x;
+          ? f.x + f.width - inset
+          : f.x + inset;
     return (
       <g transform={transform} opacity={element.opacity}>
         <svg
@@ -100,8 +115,12 @@ export function SceneElement({
           <text
             xmlSpace="preserve"
             x={x - f.x}
-            y={style.fontSize}
+            y={style.fontSize + inset}
             fill={style.color}
+            stroke={style.outline?.enabled ? style.outline.color : undefined}
+            strokeWidth={2 * inset}
+            strokeLinejoin="round"
+            paintOrder="stroke fill"
             fontFamily={`${style.fontFamily ?? "Noto Sans SC"}, Noto Sans SC`}
             fontSize={style.fontSize}
             fontWeight={style.bold ? 700 : 400}
@@ -118,7 +137,9 @@ export function SceneElement({
               <tspan
                 key={i}
                 x={x - f.x}
-                y={style.fontSize + i * style.fontSize * style.lineHeight}
+                y={
+                  style.fontSize + inset + i * style.fontSize * style.lineHeight
+                }
               >
                 {line || " "}
               </tspan>
@@ -161,6 +182,7 @@ function ImageLayer({
   }, []);
   const f = element.frame,
     c = element.crop;
+  const content = imageContentFrame(f, element.effects ?? defaultImageEffects);
   const transform = `rotate(${element.rotation} ${f.x + f.width / 2} ${f.y + f.height / 2})`;
   if (failed)
     return (
@@ -184,31 +206,37 @@ function ImageLayer({
     );
   return (
     <g transform={transform} opacity={element.opacity}>
-      <svg
-        x={f.x}
-        y={f.y}
-        width={f.width}
-        height={f.height}
-        viewBox={`${c.x * asset.width} ${c.y * asset.height} ${c.w * asset.width} ${c.h * asset.height}`}
-        preserveAspectRatio={
-          element.fit === "cover" ? "xMidYMid slice" : "xMidYMid meet"
-        }
-        overflow="hidden"
+      <ImageAppearance
+        frame={f}
+        effects={element.effects}
+        identifier={element.id}
       >
-        <image
-          href={
-            assetUrl(asset.id, variant as "preview") +
-            (reload
-              ? (variant === "original" ? "?" : "&") + "reload=" + reload
-              : "")
+        <svg
+          x={content.x}
+          y={content.y}
+          width={content.width}
+          height={content.height}
+          viewBox={`${c.x * asset.width} ${c.y * asset.height} ${c.w * asset.width} ${c.h * asset.height}`}
+          preserveAspectRatio={
+            element.fit === "cover" ? "xMidYMid slice" : "xMidYMid meet"
           }
-          onError={() => setFailed(true)}
-          x="0"
-          y="0"
-          width={asset.width}
-          height={asset.height}
-        />
-      </svg>
+          overflow="hidden"
+        >
+          <image
+            href={
+              assetUrl(asset.id, variant as "preview") +
+              (reload
+                ? (variant === "original" ? "?" : "&") + "reload=" + reload
+                : "")
+            }
+            onError={() => setFailed(true)}
+            x="0"
+            y="0"
+            width={asset.width}
+            height={asset.height}
+          />
+        </svg>
+      </ImageAppearance>
     </g>
   );
 }

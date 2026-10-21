@@ -23,6 +23,7 @@ export const compositionCapacity: Record<Composition, number> = {
   letter: 2,
 };
 export type CompositionContent = {
+  hiddenLayoutIds?: string[];
   customLayouts?: import("./layouts").LayoutTemplate[];
   stickers?: Asset[];
   phrases?: string[];

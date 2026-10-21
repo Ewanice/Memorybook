@@ -176,6 +176,8 @@ try {
         fontFamily: null,
         letterSpacing: null,
         crop: null,
+        outline: null,
+        effects: null,
       },
     }));
     response.writeHead(200, { "Content-Type": "application/json" });
@@ -194,7 +196,9 @@ try {
   const address = testServer.address();
   await page.getByRole("button", { name: "设置", exact: true }).click();
   await page.getByRole("button", { name: "AI", exact: true }).click();
-  await page.getByLabel("允许主动使用 AI", { exact: true }).check();
+  const aiToggle = page.getByLabel("允许主动使用 AI", { exact: true });
+  if (!(await aiToggle.isChecked())) await aiToggle.click();
+  await expect(aiToggle).toBeChecked();
   await page
     .getByLabel("API Base URL", { exact: true })
     .fill(`http://127.0.0.1:${address.port}/v1`);

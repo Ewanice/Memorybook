@@ -3,6 +3,8 @@ import type { LibraryContent } from "../shared/api";
 import { assetUrl } from "./Scene";
 import { Scene } from "./Scene";
 import { layoutCatalog } from "../domain/templates";
+import { coverCatalog } from "../domain/covers";
+import { sizes } from "../domain/model";
 import type { LayoutTemplate } from "../domain/layouts";
 
 export function ResourceLibrary({
@@ -16,6 +18,7 @@ export function ResourceLibrary({
   editLayout,
   newLayout,
   removeLayout,
+  restoreLayouts,
 }: {
   content: LibraryContent | null;
   busy: boolean;
@@ -27,10 +30,25 @@ export function ResourceLibrary({
   editLayout: (template: LayoutTemplate) => void;
   newLayout: () => void;
   removeLayout: (id: string) => void;
+  restoreLayouts: () => void;
 }) {
   const [tab, setTab] = useState<"stickers" | "phrases" | "layouts">(
     "stickers",
   );
+  const templates = [
+    ...coverCatalog(
+      sizes.a5,
+      "paper",
+      content?.layouts,
+      content?.hiddenLayoutIds,
+    ),
+    ...layoutCatalog(
+      undefined,
+      undefined,
+      content?.layouts,
+      content?.hiddenLayoutIds,
+    ),
+  ];
   return (
     <section className="resource-library" aria-label="创作素材库">
       <header>
@@ -58,7 +76,7 @@ export function ResourceLibrary({
             aria-selected={tab === "layouts"}
             onClick={() => setTab("layouts")}
           >
-            排版库 <small>{11 + (content?.layouts.length ?? 0)}</small>
+            排版库 <small>{templates.length}</small>
           </button>
         </div>
       </header>
@@ -135,14 +153,19 @@ export function ResourceLibrary({
         <div role="tabpanel" aria-label="排版库">
           <div className="resource-intro">
             <p className="muted">
-              所有照片排版都会参与随机生成。内置排版可复制后修改，自定义排版可随时编辑。
+              内页排版参与随机生成；封面单独选择。所有排版都可编辑或删除，已有纪念册保持不变。
             </p>
-            <button disabled={busy} onClick={newLayout}>
-              ＋ 新建排版
-            </button>
+            <div className="button-row">
+              <button disabled={busy} onClick={restoreLayouts}>
+                恢复默认排版
+              </button>
+              <button disabled={busy} onClick={newLayout}>
+                ＋ 新建排版
+              </button>
+            </div>
           </div>
           <div className="layout-library-grid">
-            {layoutCatalog(undefined, undefined, content?.layouts).map((t) => (
+            {templates.map((t) => (
               <article key={t.id}>
                 <div className="layout-library-preview">
                   <Scene
@@ -151,16 +174,21 @@ export function ResourceLibrary({
                     variant="thumbnail"
                   />
                 </div>
-                <strong>{t.name}</strong>
+                <div className="layout-caption">
+                  <strong>{t.name}</strong>
+                  <span className={"layout-kind " + (t.kind ?? "content")}>
+                    {t.kind === "cover" ? "封面" : "内页"}
+                  </span>
+                </div>
                 <div className="button-row">
                   <button disabled={busy} onClick={() => editLayout(t)}>
-                    {t.id.startsWith("builtin-") ? "复制并编辑" : "编辑排版"}
+                    编辑排版
                   </button>
-                  {!t.id.startsWith("builtin-") && (
+                  {
                     <button disabled={busy} onClick={() => removeLayout(t.id)}>
                       删除排版
                     </button>
-                  )}
+                  }
                 </div>
               </article>
             ))}

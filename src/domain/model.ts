@@ -1,6 +1,29 @@
 export type Frame = { x: number; y: number; width: number; height: number };
 export type Crop = { x: number; y: number; w: number; h: number };
+export type TextOutline = { enabled: boolean; color: string; width: number };
+export type ImageEffects = {
+  shape:
+    | "rectangle"
+    | "rounded"
+    | "ellipse"
+    | "arch"
+    | "ticket"
+    | "torn"
+    | "scallop";
+  edgeSize: number;
+  border: "none" | "solid" | "dashed" | "double" | "polaroid";
+  borderWidth: number;
+  borderColor: string;
+};
+export const defaultImageEffects: ImageEffects = {
+  shape: "rectangle",
+  edgeSize: 8,
+  border: "none",
+  borderWidth: 2,
+  borderColor: "#ffffff",
+};
 export type TextStyle = {
+  outline?: TextOutline;
   fontSize: number;
   color: string;
   align: "left" | "center" | "right";
@@ -25,6 +48,7 @@ export type TextElement = BaseElement & {
   style: TextStyle;
 };
 export type ImageElement = BaseElement & {
+  effects?: ImageEffects;
   type: "image";
   assetId: string;
   fit: "cover" | "contain";
@@ -32,6 +56,7 @@ export type ImageElement = BaseElement & {
   role: "photo" | "sticker";
 };
 export type PhotoSlotElement = BaseElement & {
+  effects?: ImageEffects;
   type: "photoSlot";
   role?: "photo" | "sticker";
 };
@@ -74,6 +99,11 @@ export type Album = {
   annotations: Annotation[];
 };
 export type Settings = {
+  displayName?: string;
+  accentColor?: string;
+  homeBackground?: string;
+  homeBackgroundOpacity?: number;
+  homeBackgroundScale?: number;
   version: 1;
   zoom: 100 | 125 | 150;
   guides: boolean;
@@ -179,6 +209,7 @@ export type Edit =
       review: boolean;
     };
 export type ElementPatch = {
+  effects?: ImageEffects;
   groupId?: string | null;
   frame?: Partial<Frame>;
   rotation?: number;
@@ -262,6 +293,7 @@ export function elementPatch(before: Element, after: Element): ElementPatch {
       "bold",
       "fontFamily",
       "letterSpacing",
+      "outline",
     ] as const)
       if (before.style[key] !== after.style[key])
         patch.style = { ...patch.style, [key]: after.style[key] };
@@ -272,5 +304,11 @@ export function elementPatch(before: Element, after: Element): ElementPatch {
     if (JSON.stringify(before.crop) !== JSON.stringify(after.crop))
       patch.crop = after.crop;
   }
+  if (
+    before.type !== "text" &&
+    after.type !== "text" &&
+    JSON.stringify(before.effects) !== JSON.stringify(after.effects)
+  )
+    patch.effects = after.effects;
   return patch;
 }

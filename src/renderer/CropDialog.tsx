@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import type { Album, ImageElement } from "../domain/model";
 import { SceneElement } from "./Scene";
+import { imageContentFrame, scaleImageEffects } from "../domain/image-effects";
+import { defaultImageEffects } from "../domain/model";
 export function CropDialog({
   album,
   element,
@@ -24,6 +26,14 @@ export function CropDialog({
       (width * element.frame.height) / element.frame.width,
     );
   const asset = album.assets.find((a) => a.id === element.assetId)!;
+  const previewEffects = scaleImageEffects(
+    value.effects ?? defaultImageEffects,
+    Math.min(width / element.frame.width, height / element.frame.height),
+  );
+  const content = imageContentFrame(
+    { x: 0, y: 0, width, height },
+    previewEffects,
+  );
   return (
     <div className="modal-backdrop">
       <section
@@ -53,8 +63,8 @@ export function CropDialog({
             const g = gesture.current;
             if (!g) return;
             const scale = Math.max(
-              width / (asset.width * g.crop.w),
-              height / (asset.height * g.crop.h),
+              content.width / (asset.width * g.crop.w),
+              content.height / (asset.height * g.crop.h),
             );
             setValue({
               ...value,
@@ -89,6 +99,7 @@ export function CropDialog({
             element={{
               ...value,
               rotation: 0,
+              effects: previewEffects,
               frame: { x: 0, y: 0, width, height },
             }}
           />

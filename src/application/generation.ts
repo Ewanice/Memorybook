@@ -1,4 +1,5 @@
 import { type Album, type Asset, DomainError } from "../domain/model";
+import { coverPhotoIndices } from "../domain/covers";
 import {
   type CodexPreferences,
   defaultCodexPreferences,
@@ -194,7 +195,7 @@ export class GenerationCoordinator {
           })),
           rules: [
             `自由设计内页沿用封面的底色 ${base.pages[0]!.background} 和纸张 ${base.pages[0]!.backgroundStyle ?? "solid"}；请根据底色选择清晰可读的文字颜色。固定排版的纸张与文字配色已成套设计，直接使用。`,
-            "封面已由软件生成。不要输出封面。照片索引 0 保留给封面，1 至末尾必须在 photoIndices 中各出现恰好一次。",
+            `封面已由软件生成。不要输出封面。照片索引 ${JSON.stringify(coverPhotoIndices(base, photos))} 已用于封面，不再使用；其余照片索引必须在 photoIndices 中各出现恰好一次。`,
             "每个结果页都要包含 layoutId、photoIndices、phraseIndices、elements。固定排版用给定 layoutId，elements=[]，照片数量不能大于 capacity。",
             "短语引用 phraseIndices 使用 phrases 的零起始索引；没有短语时用 []。",
             "当 stickers 非空时，必须在内页实际使用至少一张已选贴纸，按页轮用并保留留白；仅把贴纸列入素材库不算使用。自由页添加 kind=sticker 元素；固定页选择含 stickerSlots 的排版。stickers 为空时不得编造贴纸。",

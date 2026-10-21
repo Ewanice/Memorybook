@@ -1,12 +1,16 @@
 # 纪念册设计软件
 
-> 当前源码版本 **1.5.1**：打开即用，已移除卡密、激活界面与签发流程。详见 [本次变更](docs/15-v151-no-activation.md)。
+> 当前源码版本 **1.7.1**：首页背景滚动时保持静止，可在“设置 → 外观”按 100%–400% 缩放，自动铺满窗口。详见 [本次更新](docs/18-v171-fixed-home-background.md)。
+
+1.7.0 的排版库、封面、外观与编辑器更新见 [功能说明](docs/17-v170-library-covers-and-appearance.md)。
+
+1.5.1 已移除卡密、激活界面与签发流程。
 
 1.5.0：资源异常隔离、备份恢复、多选编辑、排版预览与拆页，以及 PDF 导出检查。详见 [版本说明](docs/14-v150-release.md)。
 
 [软件介绍与操作指南](docs/software-introduction.html) · [下载 Windows 完整文件夹版](https://github.com/Ewanice/Memorybook/releases/latest)
 
-普通使用无需开发环境：在 Releases 下载 `Memorybook-1.5.1-Windows-x64.zip`，完整解压后运行 `Memorybook/Memorybook.exe`，无需卡密或激活。普通设计与 PDF 导出离线可用，AI 使用自己的 API 或已登录的本地 Codex，不包含 AI 额度。
+普通使用无需开发环境：在 Releases 下载 `Memorybook-Windows-x64.zip`，完整解压后运行 `Memorybook/Memorybook.exe`，无需卡密或激活。普通设计与 PDF 导出离线可用，AI 使用自己的 API 或已登录的本地 Codex，不包含 AI 额度。
 
 GitHub 可免费获取；平台可提供便捷交付与技术服务，自愿赞助另行说明。
 
@@ -74,5 +78,5 @@ npm run smoke
 npm run smoke:resources
 ```
 
-文档版本：v0.8，2026-10-15。当前软件暂用“拾页 / Memorybook”名称。
+文档版本：v1.1，2026-10-21。当前软件暂用“拾页 / Memorybook”名称。
 

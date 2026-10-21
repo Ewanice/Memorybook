@@ -33,6 +33,23 @@ const common = {
   locked: { type: "boolean" },
   visible: { type: "boolean" },
 };
+const imageEffects = object({
+  shape: {
+    enum: [
+      "rectangle",
+      "rounded",
+      "ellipse",
+      "arch",
+      "ticket",
+      "torn",
+      "scallop",
+    ],
+  },
+  edgeSize: { ...number, minimum: 0, maximum: 24 },
+  border: { enum: ["none", "solid", "dashed", "double", "polaroid"] },
+  borderWidth: { ...number, minimum: 0.2, maximum: 16 },
+  borderColor: color,
+});
 const element = {
   oneOf: [
     object(
@@ -40,8 +57,9 @@ const element = {
         ...common,
         type: { const: "photoSlot" },
         role: { enum: ["photo", "sticker"] },
+        effects: imageEffects,
       },
-      ["role"],
+      ["role", "effects"],
     ),
     object({
       ...common,
@@ -59,23 +77,32 @@ const element = {
             pattern: "^(Noto Sans SC|Noto Serif SC|MemoryFont_[a-f0-9]{64})$",
           },
           letterSpacing: { ...number, minimum: -2, maximum: 20 },
+          outline: object({
+            enabled: { type: "boolean" },
+            color,
+            width: { ...number, minimum: 0.2, maximum: 8 },
+          }),
         },
-        ["fontFamily", "letterSpacing"],
+        ["fontFamily", "letterSpacing", "outline"],
       ),
     }),
-    object({
-      ...common,
-      type: { const: "image" },
-      assetId: ident,
-      fit: { enum: ["cover", "contain"] },
-      role: { enum: ["photo", "sticker"] },
-      crop: object({
-        x: { ...number, minimum: 0, maximum: 1 },
-        y: { ...number, minimum: 0, maximum: 1 },
-        w: { ...number, exclusiveMinimum: 0, maximum: 1 },
-        h: { ...number, exclusiveMinimum: 0, maximum: 1 },
-      }),
-    }),
+    object(
+      {
+        ...common,
+        type: { const: "image" },
+        effects: imageEffects,
+        assetId: ident,
+        fit: { enum: ["cover", "contain"] },
+        role: { enum: ["photo", "sticker"] },
+        crop: object({
+          x: { ...number, minimum: 0, maximum: 1 },
+          y: { ...number, minimum: 0, maximum: 1 },
+          w: { ...number, exclusiveMinimum: 0, maximum: 1 },
+          h: { ...number, exclusiveMinimum: 0, maximum: 1 },
+        }),
+      },
+      ["effects"],
+    ),
   ],
 };
 const validateElement = ajv.compile(element);
@@ -164,16 +191,35 @@ const validateAlbum = ajv.compile(
   ),
 );
 const validateSettings = ajv.compile(
-  object({
-    version: { const: 1 },
-    zoom: { enum: [100, 125, 150] },
-    guides: { type: "boolean" },
-    snap: { type: "boolean" },
-    pageSize: { enum: ["a5", "square"] },
-    quality: { enum: ["high", "share"] },
-    exportDirectory: { type: "string", maxLength: 4096 },
-    aiEnabled: { type: "boolean" },
-  }),
+  object(
+    {
+      version: { const: 1 },
+      displayName: {
+        type: "string",
+        minLength: 1,
+        maxLength: 24,
+        pattern: "\\S",
+      },
+      accentColor: color,
+      homeBackground: { type: "string", pattern: "^([a-f0-9]{64})?$" },
+      homeBackgroundOpacity: { type: "number", minimum: 0, maximum: 1 },
+      homeBackgroundScale: { type: "number", minimum: 1, maximum: 4 },
+      zoom: { enum: [100, 125, 150] },
+      guides: { type: "boolean" },
+      snap: { type: "boolean" },
+      pageSize: { enum: ["a5", "square"] },
+      quality: { enum: ["high", "share"] },
+      exportDirectory: { type: "string", maxLength: 4096 },
+      aiEnabled: { type: "boolean" },
+    },
+    [
+      "displayName",
+      "accentColor",
+      "homeBackground",
+      "homeBackgroundOpacity",
+      "homeBackgroundScale",
+    ],
+  ),
 );
 const validateAiConfig = ajv.compile(
   object({

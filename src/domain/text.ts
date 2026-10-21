@@ -5,6 +5,8 @@ export type MeasureText = (
   bold: boolean,
   fontFamily?: string,
 ) => number;
+export const textInset = (element: TextElement): number =>
+  element.style.outline?.enabled ? element.style.outline.width : 0;
 export function textLines(
   element: TextElement,
   measure: MeasureText,
@@ -22,7 +24,7 @@ export function textLines(
           element.style.fontFamily,
         ) +
           Array.from(line).length * (element.style.letterSpacing ?? 0) >
-          element.frame.width
+          Math.max(1, element.frame.width - 2 * textInset(element))
       ) {
         lines.push(line);
         line = character;
@@ -39,7 +41,8 @@ export function textOverflows(
   return (
     textLines(element, measure).length *
       element.style.fontSize *
-      element.style.lineHeight >
+      element.style.lineHeight +
+      2 * textInset(element) >
     element.frame.height
   );
 }

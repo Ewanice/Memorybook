@@ -1,5 +1,6 @@
 import { composeClassicPage } from "./classic-layouts";
-import { layoutPalette } from "./art-direction";
+import { decorateLayout } from "./image-effects";
+import { coverCatalog, instantiateCover } from "./covers";
 import {
   type Album,
   type Asset,
@@ -7,8 +8,6 @@ import {
   type Settings,
   DomainError,
   id,
-  imageElement,
-  textElement,
   sizes,
 } from "./model";
 import {
@@ -35,6 +34,7 @@ export type TemplateName =
   | "ending"
   | "blank";
 export type CreateOptions = {
+  coverLayoutId?: string;
   customSize?: Album["size"];
   density: "spacious" | "standard" | "rich";
   coverMode: "photo" | "complete";
@@ -67,11 +67,23 @@ export function suggestedPageCount(
   layout: CreateOptions["layout"] = "auto",
   seed = 1,
   custom: LayoutTemplate[] = [],
+  hidden: string[] = [],
+  coverPhotoCount = 1,
 ): number {
   if (layout === "random")
-    return randomLayoutPlan(photoCount, seed, custom).length + 1;
+    return (
+      randomLayoutPlan(
+        photoCount,
+        seed,
+        custom,
+        sizes.a5,
+        "paper",
+        hidden,
+        coverPhotoCount,
+      ).length + 1
+    );
   if (layout && layout !== "auto") {
-    let remaining = Math.max(0, photoCount - 1),
+    let remaining = Math.max(0, photoCount - coverPhotoCount),
       pages = 1,
       index = 0;
     const cycle = Object.keys(compositionLabels) as Composition[];
@@ -84,7 +96,10 @@ export function suggestedPageCount(
     return pages;
   }
   const capacity = density === "spacious" ? 2 : density === "rich" ? 6 : 4;
-  return Math.max(2, 1 + Math.ceil(Math.max(0, photoCount - 1) / capacity));
+  return Math.max(
+    2,
+    1 + Math.ceil(Math.max(0, photoCount - coverPhotoCount) / capacity),
+  );
 }
 export function createPage(
   size: Album["size"],
@@ -94,8 +109,14 @@ export function createPage(
   content: CompositionContent = {},
 ): Page {
   if (Object.hasOwn(compositionLabels, layout))
-    return composePage(size, theme, layout as Composition, assets, content);
-  return composeClassicPage(size, theme, layout, assets, content);
+    return decorateLayout(
+      composePage(size, theme, layout as Composition, assets, content),
+      layout,
+    );
+  return decorateLayout(
+    composeClassicPage(size, theme, layout, assets, content),
+    layout,
+  );
 }
 
 export function createAlbum(
@@ -132,6 +153,41 @@ export function createAlbum(
       typeof options.usePhrases !== "boolean")
   )
     throw new DomainError("生成选项无效。");
+  const size = options.customSize ? { ...options.customSize } : sizes[pageSize];
+  const covers = [
+    ...coverCatalog(
+      size,
+      theme,
+      content.customLayouts,
+      content.hiddenLayoutIds,
+    ),
+    ...layoutCatalog(
+      size,
+      theme,
+      content.customLayouts,
+      content.hiddenLayoutIds,
+    ),
+  ];
+  const coverId = options.coverLayoutId ?? "builtin-cover-" + options.coverMode;
+  if (typeof coverId !== "string" || !/^[a-zA-Z0-9_-]{0,80}$/.test(coverId))
+    throw new DomainError("封面排版编号无效。");
+  const chosen = covers.find((t) => t.id === coverId);
+  if (coverId && !chosen) throw new DomainError("封面排版已删除，请重新选择。");
+  const cover: Page = chosen
+    ? instantiateCover(
+        chosen,
+        size,
+        assets,
+        content.stickers ?? [],
+        content.phrases ?? [],
+        name,
+        city,
+      )
+    : { id: id(), role: "cover", background: "#fffaf1", elements: [] };
+  const pages = [cover];
+  const coverPhotoCount = cover.elements.filter(
+    (e) => e.type === "image" && e.role === "photo",
+  ).length;
   if (
     suggestedPageCount(
       assets.length,
@@ -139,65 +195,26 @@ export function createAlbum(
       options.layout,
       options.randomSeed,
       content.customLayouts,
+      content.hiddenLayoutIds,
+      coverPhotoCount,
     ) > 100
   )
     throw new DomainError(
       "所选排版将超过 100 页，请减少照片或改用丰富密度的基础网格。",
     );
-  if (options.coverMode === "complete" && !assets[0])
-    throw new DomainError("完整封面模式需要先导入一张封面图片。");
-  const size = options.customSize ? { ...options.customSize } : sizes[pageSize];
-  const coverPalette = layoutPalette("monologue", theme);
-  const title = textElement(
-    name || "我的纪念册",
-    {
-      x: 28,
-      y: size.height * 0.75,
-      width: size.width - 56,
-      height: size.height * 0.18,
-    },
-    32,
-  );
-  title.style.bold = true;
-  title.style.color = coverPalette.ink;
-  title.name = "封面标题";
-  title.style.fontFamily = theme === "paper" ? "Noto Serif SC" : "Noto Sans SC";
-  const badge = textElement(
-    city,
-    { x: 28, y: size.height - 36, width: size.width - 56, height: 20 },
-    10,
-  );
-  badge.style.color = coverPalette.accent;
-  badge.name = "城市角标";
-  const cover: Page = {
-    id: id(),
-    role: "cover",
-    background: coverPalette.background,
-    backgroundStyle: coverPalette.paper,
-    elements: [],
-  };
-  if (assets[0])
-    cover.elements.push(
-      imageElement(assets[0], {
-        x: 0,
-        y: 0,
-        width: size.width,
-        height:
-          options.coverMode === "complete" ? size.height : size.height * 0.69,
-      }),
-    );
-  if (options.coverMode !== "complete") cover.elements.push(title, badge);
-  const pages = [cover];
+
   const capacity =
     options.density === "spacious" ? 2 : options.density === "rich" ? 6 : 4;
   if (options.layout === "random") {
-    let photo = 1;
+    let photo = coverPhotoCount;
     for (const [index, template] of randomLayoutPlan(
       assets.length,
       options.randomSeed ?? 1,
       content.customLayouts,
       size,
       theme,
+      content.hiddenLayoutIds,
+      coverPhotoCount,
     ).entries()) {
       const capacity = layoutCapacity(template);
       pages.push(
@@ -208,13 +225,16 @@ export function createAlbum(
           content.stickers ?? [],
           content.phrases ?? [],
           index,
-          assets.length <= 1,
+          assets.length <= coverPhotoCount,
         ),
       );
       photo += capacity;
     }
   }
-  for (let i = 1; options.layout !== "random" && i < assets.length;) {
+  for (
+    let i = coverPhotoCount;
+    options.layout !== "random" && i < assets.length;
+  ) {
     const cycle = Object.keys(compositionLabels) as Composition[];
     const professional =
       options.layout && options.layout !== "auto"
@@ -291,8 +311,9 @@ export function layoutCatalog(
   size: Album["size"] = sizes.a5,
   theme: Album["theme"] = "paper",
   custom: LayoutTemplate[] = [],
+  hidden: string[] = [],
 ): LayoutTemplate[] {
-  return [
+  const builtins: LayoutTemplate[] = [
     ...(Object.keys(templateLabels) as TemplateName[])
       .filter((name) => name !== "blank" && name !== "ending")
       .map((name) => {
@@ -337,8 +358,12 @@ export function layoutCatalog(
             .map((e) => e.id),
         };
       }),
-    ...custom,
   ];
+  const all = new Map(builtins.map((t) => [t.id, t]));
+  for (const t of custom) {
+    if (t.kind !== "cover") all.set(t.id, t);
+  }
+  return [...all.values()].filter((t) => !hidden.includes(t.id));
 }
 export function randomLayoutPlan(
   count: number,
@@ -346,10 +371,12 @@ export function randomLayoutPlan(
   custom: LayoutTemplate[] = [],
   size = sizes.a5,
   theme: Album["theme"] = "paper",
+  hidden: string[] = [],
+  coverPhotoCount = 1,
 ): LayoutTemplate[] {
-  const next = shuffledCycle(layoutCatalog(size, theme, custom), seed);
+  const next = shuffledCycle(layoutCatalog(size, theme, custom, hidden), seed);
   const result: LayoutTemplate[] = [];
-  let remaining = Math.max(0, count - 1);
+  let remaining = Math.max(0, count - coverPhotoCount);
   do {
     const t = next();
     result.push(t);

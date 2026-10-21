@@ -7,7 +7,10 @@ import {
   id,
   imageElement,
 } from "./model";
+import { textInset } from "./text";
+import { scaleImageEffects } from "./image-effects";
 export type LayoutTemplate = {
+  kind?: "cover";
   id: string;
   name: string;
   size: Album["size"];
@@ -22,14 +25,15 @@ export function fitPhrase(element: Extract<Element, { type: "text" }>): void {
         Math.max(
           1,
           Math.floor(
-            element.frame.width /
+            Math.max(1, element.frame.width - 2 * textInset(element)) /
               (element.style.fontSize +
                 Math.max(0, element.style.letterSpacing ?? 0)),
           ),
         ),
     ) *
       element.style.fontSize *
-      element.style.lineHeight >
+      element.style.lineHeight +
+      2 * textInset(element) >
       element.frame.height
   )
     element.style.fontSize--;
@@ -66,6 +70,8 @@ export function instantiateLayout(
       width: original.frame.width * sx,
       height: original.frame.height * sy,
     };
+    if (e.type !== "text" && e.effects)
+      e.effects = scaleImageEffects(e.effects, Math.min(sx, sy));
     if (e.type === "photoSlot") {
       const asset =
         e.role === "sticker"
@@ -76,6 +82,11 @@ export function instantiateLayout(
       if (asset)
         e = {
           ...imageElement(asset, e.frame, e.role ?? "photo"),
+          ...(e.effects
+            ? {
+                effects: e.effects,
+              }
+            : {}),
           id: e.id,
           rotation: e.rotation,
           opacity: e.opacity,
@@ -83,6 +94,11 @@ export function instantiateLayout(
       else if (!keepSlots || e.role === "sticker") continue;
     } else if (e.type === "text") {
       e.style.fontSize *= Math.min(sx, sy);
+      if (e.style.outline)
+        e.style.outline.width = Math.max(
+          0.2,
+          Math.min(8, e.style.outline.width * Math.min(sx, sy)),
+        );
       if (template.phraseIds.includes(original.id)) {
         e.text = phrases.length ? phrases[phrase++ % phrases.length]! : "";
         fitPhrase(e);

@@ -6,6 +6,7 @@ import { PhraseEditor } from "./PhraseEditor";
 import { FontSettings } from "./FontSettings";
 import { CodexSettings } from "./CodexSettings";
 import { StoragePanel } from "./RecoveryCenter";
+import { AppearanceSettings } from "./AppearanceSettings";
 export function SettingsDialog({
   data,
   onClose,
@@ -90,6 +91,7 @@ export function SettingsDialog({
           <nav>
             {[
               "通用",
+              "外观",
               "文件与导出",
               "备份与恢复",
               "短语库",
@@ -117,6 +119,13 @@ export function SettingsDialog({
             ))}
           </nav>
           <div className="settings-content">
+            {tab === "外观" && (
+              <AppearanceSettings
+                settings={settings}
+                onUpdate={onUpdate}
+                report={report}
+              />
+            )}
             {tab === "备份与恢复" && (
               <StoragePanel report={report} onBusy={setBusy} />
             )}

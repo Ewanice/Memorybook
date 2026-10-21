@@ -7,6 +7,7 @@ import { elementPatch } from "../domain/model";
 import { NumberField, TextField } from "./Fields";
 import { textOverflows } from "../domain/text";
 import { measureText } from "./Scene";
+import { OutlineControls, ImageEffectControls } from "./EffectControls";
 export function Inspector({
   album,
   page,
@@ -143,6 +144,13 @@ export function Inspector({
           {textOverflows(el, measureText) && (
             <p className="warning">文字超出文本框，请扩大文本框或缩小字号。</p>
           )}
+          <OutlineControls
+            outline={el.style.outline}
+            disabled={locked}
+            onChange={(outline) =>
+              change({ ...el, style: { ...el.style, outline } })
+            }
+          />
         </>
       ) : el.type === "photoSlot" ? (
         <>
@@ -233,6 +241,13 @@ export function Inspector({
             </label>
           </details>
         </>
+      )}
+      {el.type !== "text" && (
+        <ImageEffectControls
+          effects={el.effects}
+          disabled={locked}
+          onChange={(effects) => change({ ...el, effects })}
+        />
       )}
       <details>
         <summary>更多调整</summary>

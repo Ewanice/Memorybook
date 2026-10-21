@@ -1,4 +1,8 @@
 :root {
+  --accent: #315a43;
+  --accent-ink: #ffffff;
+  --accent-soft: #edf3ef;
+  --accent-line: #a5b8ac;
   font-family: "Microsoft YaHei", sans-serif;
   color: #293c32;
   background: #f7f7f3;
@@ -891,13 +895,14 @@ details[open] > summary:before {
 }
 .picked-photos {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin-top: 16px;
   max-height: 220px;
   overflow: auto;
 }
 .picked-photos > div {
+  min-width: 0;
   position: relative;
   aspect-ratio: 1;
 }
@@ -2036,4 +2041,297 @@ details[open] > summary:before {
 .storage-paths p {
   margin: 8px 0;
   line-height: 1.6;
+}
+
+/* Interface hierarchy and personal appearance; document artwork is unchanged. */
+.app button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.app button.primary:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+.app button:hover:not(:disabled):not(.primary) {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+.app .upload-area {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+.app .new-album-tile {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+.app button.selected,
+.app button.active,
+.app button[aria-pressed="true"],
+.app .library-tabs [aria-selected="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: #263b33;
+}
+.app input[type="checkbox"],
+.app input[type="range"] {
+  accent-color: var(--accent);
+}
+.app :is(button, input, textarea, select):focus-visible {
+  outline-color: var(--accent);
+}
+.app .brand,
+.app .eyebrow {
+  color: var(--accent);
+}
+.app .muted,
+.app .field small {
+  color: #69766f;
+  line-height: 1.7;
+}
+.app .field {
+  color: #46594e;
+  font-size: 12px;
+  font-weight: 500;
+}
+.app :is(h3, h4, .panel-title) {
+  color: #293c32;
+}
+.app .panel-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.app
+  :is(.inspector, .new-dialog, .settings-content, .template-palette, .layers)
+  details {
+  border: 1px solid #dde4dd;
+  border-radius: 8px;
+  padding: 0;
+  margin-top: 14px;
+  background: #ffffffb8;
+  overflow: clip;
+}
+.app
+  :is(.inspector, .new-dialog, .settings-content, .template-palette, .layers)
+  summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #34483d;
+  background: color-mix(in srgb, var(--accent) 5%, #fafbf9);
+}
+.app summary::-webkit-details-marker {
+  display: none;
+}
+.app summary:before {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border-radius: 5px;
+  background: var(--accent-soft);
+  color: #46594e;
+  font-size: 14px;
+}
+.app
+  :is(.inspector, .new-dialog, .settings-content, .template-palette, .layers)
+  details[open] {
+  padding-bottom: 10px;
+}
+.app
+  :is(.inspector, .new-dialog, .settings-content, .template-palette, .layers)
+  details[open]
+  > summary {
+  margin-bottom: 12px;
+  border-bottom: 1px solid #dde4dd;
+}
+.app
+  :is(.inspector, .new-dialog, .settings-content, .template-palette, .layers)
+  details
+  > :not(summary) {
+  margin-left: 12px;
+  margin-right: 12px;
+}
+.app :is(.inspector, .new-dialog) details .field-row {
+  gap: 10px;
+}
+.app .section-label {
+  border-top: 1px solid #dce3db;
+  padding-top: 20px;
+  margin-top: 22px;
+}
+.app .section-label h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+.app .check {
+  color: #34483d;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.cover-selection {
+  margin: 22px 0 12px;
+  padding: 16px;
+  border: 1px solid #dce3db;
+  border-radius: 9px;
+  background: #ffffff99;
+}
+.cover-selection legend {
+  padding: 0 8px;
+  color: #293c32;
+  font-weight: 600;
+  font-size: 14px;
+}
+.cover-selection .field {
+  margin-bottom: 8px;
+}
+.cover-selection .muted {
+  margin-bottom: 0;
+}
+.layout-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0;
+}
+.layout-caption strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  margin-bottom: 0;
+}
+.layout-kind {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: #edf0eb;
+  color: #52645a;
+}
+.layout-kind.cover {
+  background: #f3e9da;
+  color: #795938;
+}
+.home-surface {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+}
+.home-background {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.home-background:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--home-background);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transform: scale(var(--home-scale, 1));
+  transform-origin: center;
+  opacity: var(--home-opacity, 0.16);
+  pointer-events: none;
+}
+.home-surface .home-header {
+  background: #ffffffd9;
+  backdrop-filter: blur(10px);
+}
+.home-surface .resource-library {
+  background: #ffffffd9;
+  border-radius: 12px;
+  padding: 24px;
+}
+.home-surface .brand {
+  max-width: 45vw;
+  overflow-wrap: anywhere;
+}
+.accent-presets {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0 28px;
+}
+.accent-presets button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 3px solid #fff;
+  outline: 1px solid #d5ddd6;
+  border-radius: 50%;
+}
+.settings-group {
+  margin: 24px 0;
+  border-top: 1px solid #dde4dd;
+  border-bottom: 1px solid #dde4dd;
+  padding: 20px 0;
+}
+.home-background-preview {
+  display: block;
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  margin: 16px 0;
+  border-radius: 8px;
+}
+.editor-quick-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 20px;
+  border-bottom: 1px solid #dce3db;
+  background: #fcfdfa;
+}
+.editor-quick-actions button {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.tool-group-label {
+  color: #58695e;
+  font-size: 11px;
+  margin-right: 5px;
+}
+.tool-divider {
+  width: 1px;
+  height: 20px;
+  background: #dce3db;
+  margin: 0 5px;
+}
+.tool-hint {
+  margin-left: auto;
+  color: #758278;
+  font-size: 11px;
+}
+.create-size-options {
+  margin: 0 0 20px;
+}
+.app .layers details > button,
+.app .inspector details > button.wide {
+  width: calc(100% - 24px);
+}
+.new-body > * {
+  min-width: 0;
+}
+.app .new-form .field > small {
+  margin-top: -4px;
+  font-weight: 400;
+}
+@media (max-width: 1300px) {
+  .tool-hint {
+    display: none;
+  }
+  .home-surface .resource-library {
+    padding: 16px;
+  }
 }

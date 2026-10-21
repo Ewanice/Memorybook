@@ -227,7 +227,11 @@ export function TemplateEditor({
       >
         <header>
           <div>
-            <p className="eyebrow">把你的构图，变成可重复使用的排版</p>
+            <p className="eyebrow">
+              {value.kind === "cover"
+                ? "封面排版 · 标题与城市可自动填入"
+                : "内页排版 · 参与随机生成"}
+            </p>
             <input
               aria-label="排版名称"
               maxLength={60}
@@ -282,6 +286,20 @@ export function TemplateEditor({
         </header>
         <div className="template-workspace">
           <aside className="template-palette">
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={value.kind === "cover"}
+                disabled={value.id.startsWith("builtin-")}
+                onChange={(e) => {
+                  const next = { ...live.current };
+                  if (e.target.checked) next.kind = "cover";
+                  else delete next.kind;
+                  update(next);
+                }}
+              />
+              用作封面
+            </label>
             <h4>添加位置</h4>
             <button onClick={() => add("photo")}>＋ 照片位置</button>
             <button onClick={() => add("sticker")}>＋ 贴纸位置</button>
@@ -321,23 +339,61 @@ export function TemplateEditor({
           </main>
           <div className="template-properties">
             {element?.type === "text" && (
-              <label className="check phrase-role">
-                <input
-                  type="checkbox"
-                  checked={value.phraseIds.includes(element.id)}
-                  onChange={(e) =>
-                    update({
-                      ...live.current,
-                      phraseIds: e.target.checked
-                        ? [...live.current.phraseIds, element.id]
-                        : live.current.phraseIds.filter(
-                            (key) => key !== element.id,
+              <>
+                <label className="field">
+                  文字用途
+                  <select
+                    aria-label="文字用途"
+                    value={
+                      element.name === "封面标题"
+                        ? "title"
+                        : element.name === "城市角标"
+                          ? "city"
+                          : value.phraseIds.includes(element.id)
+                            ? "phrase"
+                            : "fixed"
+                    }
+                    onChange={(e) => {
+                      const role = e.target.value;
+                      update({
+                        ...live.current,
+                        page: {
+                          ...live.current.page,
+                          elements: live.current.page.elements.map((el) =>
+                            el.id === element.id
+                              ? {
+                                  ...el,
+                                  name:
+                                    role === "title"
+                                      ? "封面标题"
+                                      : role === "city"
+                                        ? "城市角标"
+                                        : "固定文字",
+                                }
+                              : el,
                           ),
-                    })
-                  }
-                />
-                生成时填入短语
-              </label>
+                        },
+                        phraseIds:
+                          role === "phrase"
+                            ? [
+                                ...new Set([
+                                  ...live.current.phraseIds,
+                                  element.id,
+                                ]),
+                              ]
+                            : live.current.phraseIds.filter(
+                                (id) => id !== element.id,
+                              ),
+                      });
+                    }}
+                  >
+                    <option value="fixed">固定文字</option>
+                    <option value="phrase">从短语库填入</option>
+                    <option value="title">纪念册标题</option>
+                    <option value="city">城市或角标</option>
+                  </select>
+                </label>
+              </>
             )}
             <Inspector
               key={value.page.id + ":" + selected}
@@ -356,7 +412,10 @@ export function TemplateEditor({
         </div>
         <footer>
           Delete 删除 · 方向键微调 · Shift 加速 · Ctrl+D 复制 · Ctrl+Z 撤销 ·
-          Ctrl+Y 重做。至少保留一个照片位置。
+          Ctrl+Y 重做。
+          {value.kind === "cover"
+            ? "封面可设置自动填入标题和角标。"
+            : "内页至少保留一个照片位置。"}
         </footer>
       </section>
     </div>

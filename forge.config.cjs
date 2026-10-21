@@ -1,9 +1,13 @@
 const fs = require("node:fs");
 const { FuseV1Options, FuseVersion } = require("@electron/fuses");
+const {
+  publishProgram,
+  clearPackageStage,
+} = require("./scripts/package-output.cjs");
 const version = JSON.parse(fs.readFileSync("package.json", "utf8")).version;
 if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error("版本号无效。");
 module.exports = {
-  outDir: `out/packages/${version}`,
+  outDir: "out/.package-stage",
   packagerConfig: {
     electronZipDir: process.env.MEMORY_ELECTRON_ZIP_DIR || undefined,
     asar: true,
@@ -39,7 +43,7 @@ module.exports = {
   hooks: {
     postPackage: async (_config, result) => {
       const path = require("node:path");
-      for (const directory of result.outputPaths) {
+      for (const [index, directory] of result.outputPaths.entries()) {
         fs.cpSync(
           ".local/bundled-materials-ascii",
           path.join(directory, "materials"),
@@ -51,16 +55,20 @@ module.exports = {
           "assets/phrases.txt",
           path.join(directory, "phrases.txt"),
         );
+        const target = path.resolve("out/packages/Memorybook-win32-x64");
+        publishProgram(directory, target);
+        result.outputPaths[index] = target;
+        clearPackageStage(directory);
       }
     },
     prePackage: async () => {
       const path = require("node:path"),
-        target = path.resolve(`out/packages/${version}/Memorybook-win32-x64`);
+        target = path.resolve("out/.package-stage/Memorybook-win32-x64");
       for (const name of ["data", "materials/imported-fonts"]) {
         const directory = path.join(target, name);
         if (fs.existsSync(directory) && fs.readdirSync(directory).length)
           throw new Error(
-            "打包目标包含用户资料，已停止覆盖。请保留该目录并使用新的版本目录。",
+            "临时打包目录包含用户资料，请先移出资料。最终打包始终覆盖 out/packages/Memorybook-win32-x64。",
           );
       }
       const info = JSON.parse(fs.readFileSync("dist/build-info.json", "utf8"));

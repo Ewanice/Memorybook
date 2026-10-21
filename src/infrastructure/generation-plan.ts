@@ -1,4 +1,5 @@
 import Ajv from "ajv";
+import { coverPhotoIndices } from "../domain/covers";
 import {
   type Album,
   type Asset,
@@ -46,7 +47,7 @@ export const generationSchema = {
           layoutId: { type: "string" },
           photoIndices: {
             type: "array",
-            items: { type: "integer", minimum: 1 },
+            items: { type: "integer", minimum: 0 },
             maxItems: 50,
           },
           phraseIndices: {
@@ -101,10 +102,8 @@ export function applyGenerationPlan(
     throw new DomainError("Codex 返回的纪念册结构不正确，未创建工程。");
   const plan = value as { pages: PlanPage[] };
   const assignments = plan.pages.flatMap((p) => p.photoIndices);
-  const expected = Array.from(
-    { length: Math.max(0, photos.length - 1) },
-    (_, i) => i + 1,
-  );
+  const reserved = new Set(coverPhotoIndices(base, photos));
+  const expected = photos.flatMap((_, i) => (reserved.has(i) ? [] : [i]));
   if (
     assignments.length !== expected.length ||
     new Set(assignments).size !== assignments.length ||
@@ -122,7 +121,7 @@ export function applyGenerationPlan(
         !template ||
         p.elements.length ||
         p.photoIndices.length > layoutCapacity(template) ||
-        (photos.length > 1 && !p.photoIndices.length)
+        (expected.length > 0 && !p.photoIndices.length)
       )
         throw new DomainError("Codex 选择了无效排版或照片数量。");
       album.pages.push(
@@ -133,7 +132,7 @@ export function applyGenerationPlan(
           stickers,
           p.phraseIndices.map((n) => phrases[n]!),
           index,
-          photos.length <= 1,
+          expected.length === 0,
         ),
       );
       continue;
