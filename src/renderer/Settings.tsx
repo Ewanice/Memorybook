@@ -229,6 +229,12 @@ export function SettingsDialog({
                   >
                     选择文件夹
                   </button>
+                  <button
+                    disabled={busy || !settings.exportDirectory}
+                    onClick={() => update({ ...settings, exportDirectory: "" })}
+                  >
+                    清除默认导出目录
+                  </button>
                 </label>
                 <label className="field">
                   默认 PDF 质量

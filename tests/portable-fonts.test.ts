@@ -8,11 +8,67 @@ import { inspectFont, FontStore } from "../src/infrastructure/fonts";
 import {
   migrateLegacy,
   migratePortableNames,
+  configureStorage,
 } from "../src/infrastructure/portable";
 import { createAlbum } from "../src/domain/templates";
 import { applyEdit } from "../src/domain/edit";
 import { assertAlbum } from "../src/domain/validation";
 import { usedFontIds, fontCss } from "../src/domain/fonts";
+import { Store } from "../src/infrastructure/store";
+import { defaultSettings } from "../src/domain/model";
+import type { App } from "electron";
+import { rm } from "node:fs/promises";
+
+test("全新目录不读取系统用户目录，不继承其他安装的设置或工程；本目录重启保留设置", async (t) => {
+  const folder = await mkdtemp(join(tmpdir(), "memory-fresh-"));
+  t.after(() => rm(folder, { recursive: true, force: true }));
+  const legacy = join(folder, "old-system-profile"),
+    root = join(folder, "Memorybook");
+  const oldStore = new Store(legacy);
+  oldStore.saveSettings({
+    ...defaultSettings,
+    exportDirectory: join(folder, "old-exports"),
+    aiEnabled: true,
+  });
+  oldStore.create(createAlbum("旧工程", "", "paper", "a5", []));
+  oldStore.close();
+  const requested: string[] = [];
+  const app = {
+    getAppPath: () => join(root, "resources", "app.asar"),
+    getPath: (key: string) => {
+      requested.push(key);
+      return key === "userData" ? legacy : join(root, "Memorybook.exe");
+    },
+    setPath: () => {},
+    setAppLogsPath: () => {},
+  } as unknown as App;
+  const paths = configureStorage(app, false);
+  assert.equal(paths.root, root);
+  assert(!requested.includes("userData"));
+  await migrateLegacy(paths);
+  const fresh = new Store(paths.data);
+  assert.deepEqual(fresh.settings(), defaultSettings);
+  assert.equal(fresh.list().length, 0);
+  fresh.saveSettings({
+    ...defaultSettings,
+    exportDirectory: join(root, "chosen-exports"),
+  });
+  fresh.close();
+  await migrateLegacy(paths);
+  const reopened = new Store(paths.data);
+  assert.equal(
+    reopened.settings().exportDirectory,
+    join(root, "chosen-exports"),
+  );
+  reopened.close();
+  const original = new Store(legacy);
+  assert.equal(original.list()[0]!.name, "旧工程");
+  assert.equal(
+    original.settings().exportDirectory,
+    join(folder, "old-exports"),
+  );
+  original.close();
+});
 function fontFixture(restriction = 0) {
   const name = Buffer.from("Fixture Font", "utf16le");
   name.swap16();
@@ -100,9 +156,9 @@ test("逐页纸张可撤销，不改变其他页或旧文档格式", () => {
     /结构/,
   );
 });
-test("旧数据迁移保留源、包含原图，已有目标数据库不会被覆盖", async () => {
+test("同目录旧数据升级保留源与原图，已有目标数据库不会被覆盖", async () => {
   const root = await mkdtemp(join(tmpdir(), "memory-portable-")),
-    legacy = join(root, "old"),
+    legacy = join(root, "数据"),
     data = join(root, "new");
   await mkdir(join(legacy, "assets"), { recursive: true });
   await writeFile(join(legacy, "assets", "original"), "photo");
@@ -111,7 +167,7 @@ test("旧数据迁移保留源、包含原图，已有目标数据库不会被�
     "CREATE TABLE example(value TEXT);INSERT INTO example VALUES('saved');",
   );
   db.close();
-  await migrateLegacy({ root, data, legacy, migrate: true });
+  await migrateLegacy({ root, data, migrate: true });
   await access(join(legacy, "memorybook.sqlite"));
   assert.equal(
     await readFile(join(data, "assets", "original"), "utf8"),
@@ -124,7 +180,7 @@ test("旧数据迁移保留源、包含原图，已有目标数据库不会被�
   );
   target.exec("UPDATE example SET value='new'");
   target.close();
-  await migrateLegacy({ root, data, legacy, migrate: true });
+  await migrateLegacy({ root, data, migrate: true });
   const reopened = new DatabaseSync(join(data, "memorybook.sqlite"));
   assert.equal(
     reopened.prepare("SELECT value FROM example").get()!.value,
@@ -152,7 +208,6 @@ test("中文旧目录迁移至 ASCII 路径，保留源且不覆盖已编辑的�
   const paths = {
     root,
     data,
-    legacy: join(root, "missing-old-profile"),
     migrate: true,
   };
   await migrateLegacy(paths);

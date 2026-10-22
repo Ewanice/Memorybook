@@ -16,11 +16,9 @@ import { DatabaseSync } from "node:sqlite";
 export type StoragePaths = {
   root: string;
   data: string;
-  legacy: string;
   migrate: boolean;
 };
 export function configureStorage(app: App, development: boolean): StoragePaths {
-  const legacy = app.getPath("userData");
   const appPath = app.getAppPath();
   const exe = dirname(app.getPath("exe"));
   const root = development
@@ -46,8 +44,7 @@ export function configureStorage(app: App, development: boolean): StoragePaths {
   return {
     root,
     data,
-    legacy,
-    migrate: !development && !explicit && resolve(legacy) !== data,
+    migrate: !development && !explicit,
   };
 }
 async function exists(path: string): Promise<boolean> {
@@ -103,10 +100,9 @@ export async function migrateLegacy(paths: StoragePaths): Promise<void> {
   const { unlink } = await import("node:fs/promises");
   await writeFile(probe, "");
   await unlink(probe);
-  const oldPortable = join(paths.root, "数据");
-  const sourceDirectory = (await exists(join(oldPortable, "memorybook.sqlite")))
-    ? oldPortable
-    : paths.legacy;
+  // Only upgrade data already beside this executable. A new folder must never
+  // inherit another installation's projects, settings or credentials.
+  const sourceDirectory = join(paths.root, "数据");
   const destination = join(paths.data, "memorybook.sqlite"),
     source = join(sourceDirectory, "memorybook.sqlite");
   if (!paths.migrate || (await exists(destination)) || !(await exists(source)))
@@ -125,6 +121,6 @@ export async function migrateLegacy(paths: StoragePaths): Promise<void> {
   await rename(temp, destination);
   await writeFile(
     join(paths.data, "migration-notes.txt"),
-    "已从旧版数据目录复制工程、素材和设置，原目录保留。请确认工程正常后自行处理旧目录。\n",
+    "已从软件同目录的旧版数据文件夹复制工程、素材和设置，原目录保留。未读取系统用户目录。\n",
   );
 }

@@ -1,7 +1,7 @@
 import { packageRoot } from "./release-paths.mjs";
 import { chromium } from "@playwright/test";
 import { spawn } from "node:child_process";
-import { readFile, writeFile, mkdir, cp, stat } from "node:fs/promises";
+import { readFile, writeFile, cp, stat } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
@@ -13,9 +13,6 @@ await cp(source, root, {
   filter: (path) =>
     !path.includes("imported-fonts") && !path.startsWith(join(source, "data")),
 });
-await mkdir(data, { recursive: true });
-// An empty target database prevents this isolated check from copying the operator's legacy profile.
-await writeFile(join(data, "memorybook.sqlite"), new Uint8Array());
 const child = spawn(
   join(root, "Memorybook.exe"),
   ["--remote-debugging-port=0"],
@@ -49,6 +46,42 @@ try {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.getByRole("heading", { name: "我的纪念册" }).waitFor();
+  const fresh = await page.evaluate(() => window.memorybook.bootstrap());
+  assert.equal(
+    fresh.settings.exportDirectory,
+    "",
+    "全新解压目录的导出路径必须为空，不得继承本机旧设置",
+  );
+  assert.equal(fresh.albums.length, 0, "首次启动不得自动导入其他安装的工程");
+  assert.equal(fresh.hasAiToken, false, "首次启动不得继承其他安装的 AI Key");
+  assert.equal(fresh.settings.aiEnabled, false);
+  assert.equal(fresh.fonts.length, 0);
+  const library = await page.evaluate(() => window.memorybook.resources());
+  assert.equal(library.stickers.length, 0);
+  assert.equal(library.layouts.length, 0);
+  await page.evaluate(
+    async (value) => {
+      const boot = await window.memorybook.bootstrap();
+      await window.memorybook.settings({
+        ...boot.settings,
+        exportDirectory: value,
+      });
+    },
+    join(root, "chosen-export"),
+  );
+  await page.reload();
+  await page.getByRole("button", { name: "设置", exact: true }).click();
+  await page.getByRole("button", { name: "文件与导出", exact: true }).click();
+  await page
+    .getByRole("button", { name: "清除默认导出目录", exact: true })
+    .click();
+  await page.getByText("首次导出时选择", { exact: true }).waitFor();
+  assert.equal(
+    (await page.evaluate(() => window.memorybook.bootstrap())).settings
+      .exportDirectory,
+    "",
+  );
+  await page.getByRole("button", { name: "完成", exact: true }).click();
   const paths = await page.evaluate(() => window.memorybook.storageInfo());
   assert.equal(resolve(paths.root), root);
   assert.equal(resolve(paths.data), data);
@@ -71,6 +104,9 @@ try {
         data,
         paths,
         defaultDirectoryVerified: true,
+        freshStartupDefaultsVerified: true,
+        noPrecreatedDatabase: true,
+        clearExportDirectoryVerified: true,
         externalMaterialsVerified: true,
         archiveSha256: createHash("sha256")
           .update(await readFile(join(source, "resources/app.asar")))
