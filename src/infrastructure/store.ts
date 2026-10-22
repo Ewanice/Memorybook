@@ -14,10 +14,21 @@ import { defaultSettings, DomainError } from "../domain/model";
 import { assertAlbum, assertSettings } from "../domain/validation";
 import jsonPatch from "fast-json-patch";
 import { health } from "./health";
+import { SharedPreferences, sharedPreferenceKeys } from "./shared-preferences";
 const { compare, applyPatch } = jsonPatch;
 
 export class Store {
   private db: DatabaseSync;
+  private sharedPreferences?: SharedPreferences;
+  useSharedPreferences(preferences: SharedPreferences): void {
+    preferences.seedFrom(this);
+    this.sharedPreferences = preferences;
+  }
+  preferencesTransaction<T>(action: () => T): T {
+    return this.sharedPreferences
+      ? this.sharedPreferences.transaction(action)
+      : this.transaction(action);
+  }
   private backupReferences = new Map<
     string,
     { signature: string; ids: Set<string> }
@@ -123,12 +134,18 @@ export class Store {
     }
   }
   getValue(key: string): string | null {
+    if (this.sharedPreferences && sharedPreferenceKeys.has(key))
+      return this.sharedPreferences.getValue(key);
     const row = this.db
       .prepare("SELECT value FROM preferences WHERE key=?")
       .get(key) as { value: string } | undefined;
     return row?.value ?? null;
   }
   setValue(key: string, value: string): void {
+    if (this.sharedPreferences && sharedPreferenceKeys.has(key)) {
+      this.sharedPreferences.setValue(key, value);
+      return;
+    }
     this.db
       .prepare(
         "INSERT INTO preferences(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
@@ -153,7 +170,9 @@ export class Store {
       return structuredClone(defaultSettings);
     }
   }
-  saveSettings(value: unknown): Settings {
+  saveSettings(value: unknown, expected?: Settings): Settings {
+    if (this.sharedPreferences)
+      return this.sharedPreferences.saveSettings(value, expected);
     assertSettings(value);
     const raw = this.getValue("settings");
     if (raw) {
@@ -321,6 +340,10 @@ export class Store {
     });
   }
   archivePreference(key: string, value: string): void {
+    if (this.sharedPreferences && sharedPreferenceKeys.has(key)) {
+      this.sharedPreferences.archivePreference(key, value);
+      return;
+    }
     const previous = this.db
       .prepare(
         "SELECT value FROM quarantined_preferences WHERE key=? ORDER BY rowid DESC LIMIT 1",

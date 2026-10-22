@@ -61,7 +61,9 @@ export function SettingsDialog({
       !window.confirm("关闭 AI 会取消正在进行的 AI 修改，是否继续？")
     )
       return;
-    void action(async () => onUpdate(await window.memorybook.settings(next)));
+    void action(async () =>
+      onUpdate(await window.memorybook.settings(next, settings)),
+    );
   }
   return (
     <div className="modal-backdrop">
@@ -219,10 +221,13 @@ export function SettingsDialog({
                         const path = await window.memorybook.chooseDirectory();
                         if (path)
                           onUpdate(
-                            await window.memorybook.settings({
-                              ...settings,
-                              exportDirectory: path,
-                            }),
+                            await window.memorybook.settings(
+                              {
+                                ...settings,
+                                exportDirectory: path,
+                              },
+                              settings,
+                            ),
                           );
                       })
                     }
@@ -262,13 +267,15 @@ export function SettingsDialog({
                   打开项目数据文件夹
                 </button>
                 <p className="muted">
-                  默认保存在软件目录的「data」文件夹。短语库位于软件根目录，导入字体及内置素材位于「materials」。预览缓存约
+                  设置由同一 Windows
+                  用户下的新版副本共用；工程与素材库各自独立，保存在软件目录的「data」。短语库位于软件根目录，导入字体及内置素材位于「materials」。预览缓存约
                   256 MB 自动淘汰，高清 PDF 使用原图。
                 </p>
                 {paths && (
                   <details className="storage-paths">
                     <summary>查看实际保存位置</summary>
                     <p>软件：{paths.root}</p>
+                    <p>共享设置：{paths.preferences}</p>
                     <p>工程：{paths.data}</p>
                     <p>照片与贴纸：{paths.assets}</p>
                     <p>缓存：{paths.cache}</p>

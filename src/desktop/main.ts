@@ -26,6 +26,7 @@ import {
   restoreWorkspace,
 } from "../infrastructure/workspace";
 import { Store } from "../infrastructure/store";
+import { SharedPreferences } from "../infrastructure/shared-preferences";
 import { openStore } from "../infrastructure/open-store";
 import { exportSelection } from "../domain/export-options";
 import {
@@ -103,6 +104,8 @@ let window: BrowserWindow;
 let store: Store;
 let assets: AssetStore;
 let fonts: FontStore;
+let sharedPreferences: SharedPreferences;
+let appearanceAssets: AssetStore;
 async function availableFonts() {
   try {
     const result = await fonts.list();
@@ -295,10 +298,14 @@ async function exportPdf(input: ExportPayload): Promise<string | null> {
     if (controller.signal.aborted) throw controller.signal.reason;
     await atomicWrite(result.filePath, bytes);
     try {
-      store.saveSettings({
-        ...store.settings(),
-        exportDirectory: dirname(result.filePath),
-      });
+      const previous = store.settings();
+      store.saveSettings(
+        {
+          ...previous,
+          exportDirectory: dirname(result.filePath),
+        },
+        previous,
+      );
     } catch {
       health.report(
         "export-preferences",
@@ -464,6 +471,29 @@ async function start(): Promise<void> {
   const directory = storage.data;
   store = await openStore(directory);
   assets = new AssetStore(join(directory, "assets"));
+  sharedPreferences = new SharedPreferences(storage.preferences!);
+  appearanceAssets = new AssetStore(
+    join(storage.preferences!, "appearance"),
+    join(directory, "appearance-previews"),
+  );
+  const localBackground = store.settings().homeBackground;
+  if (sharedPreferences.getValue("settings") === null && localBackground) {
+    try {
+      await appearanceAssets.put(
+        await assets.read(localBackground),
+        "home-background",
+        localBackground,
+      );
+    } catch {
+      health.report(
+        "appearance-migration",
+        new DomainError(
+          "旧首页背景无法复制到共享设置目录，请重新选择背景。旧原图保留，工程不受影响。",
+        ),
+      );
+    }
+  }
+  store.useSharedPreferences(sharedPreferences);
   fonts = new FontStore(join(storage.root, "materials", "imported-fonts"));
   const libraryDirectory = storage.root;
   resources = new ResourceLibrary(
@@ -609,16 +639,17 @@ async function start(): Promise<void> {
           },
         );
       }
-      if (url.host === "asset") {
+      if (url.host === "asset" || url.host === "appearance") {
+        const source = url.host === "appearance" ? appearanceAssets : assets;
         const variant = url.searchParams.get("variant");
         if (variant && !["thumbnail", "preview", "share"].includes(variant))
           return new Response(null, { status: 400 });
         const data = variant
-          ? await assets.preview(
+          ? await source.preview(
               url.pathname.slice(1),
               variant as "thumbnail" | "preview" | "share",
             )
-          : await assets.read(url.pathname.slice(1));
+          : await source.read(url.pathname.slice(1));
         const mime =
           data[0] === 137
             ? "image/png"
@@ -700,7 +731,7 @@ async function start(): Promise<void> {
     });
     if (choice === 1) event.preventDefault();
   });
-  const methods: DesktopApi = {
+  const methods: Omit<DesktopApi, "onPreferencesChanged"> = {
     templateDraft: async () => {
       const raw = store.getValue("layout-draft");
       if (!raw) return null;
@@ -942,16 +973,21 @@ async function start(): Promise<void> {
         filters: [{ name: "图片", extensions: ["jpg", "jpeg", "png", "webp"] }],
       });
       if (result.canceled || !result.filePaths[0]) return store.settings();
-      const image = await assets.import(result.filePaths[0]);
-      return store.saveSettings({
-        ...store.settings(),
-        homeBackground: image.id,
-      });
+      const image = await appearanceAssets.import(result.filePaths[0]);
+      const previous = store.settings();
+      return store.saveSettings(
+        {
+          ...previous,
+          homeBackground: image.id,
+        },
+        previous,
+      );
     },
     codexStatus: () => generation.connect(),
     reconnectCodex: () => generation.reconnect(),
     codexPreferences: async () => generation.preferences(),
-    saveCodexPreferences: async (value) => generation.savePreferences(value),
+    saveCodexPreferences: async (value, expected) =>
+      generation.savePreferences(value, expected),
     chooseCodex: async () => {
       const result = await dialog.showOpenDialog(window, {
         title: "选择 Codex 可执行文件",
@@ -1145,8 +1181,8 @@ async function start(): Promise<void> {
       }));
       return store.create(copy);
     },
-    settings: async (value) => {
-      const saved = store.saveSettings(value);
+    settings: async (value, expected) => {
+      const saved = store.saveSettings(value, expected);
       window.webContents.setZoomFactor(saved.zoom / 100);
       if (!saved.aiEnabled) ai.cancelAll();
       return saved;
@@ -1157,8 +1193,8 @@ async function start(): Promise<void> {
           properties: ["openDirectory", "createDirectory"],
         })
       ).filePaths[0] ?? null,
-    configureAi: async (config, apiKey) => {
-      aiPreferences.configure(config, apiKey);
+    configureAi: async (config, apiKey, expected) => {
+      aiPreferences.configure(config, apiKey, expected);
       ai.cancelAll();
     },
     removeAiKey: async () => {
@@ -1199,6 +1235,7 @@ async function start(): Promise<void> {
     },
     storageInfo: async () => ({
       root: storage.root,
+      preferences: storage.preferences!,
       data: directory,
       assets: assets.directory,
       cache: assets.cacheDirectory,
@@ -1296,10 +1333,23 @@ async function start(): Promise<void> {
           !Object.hasOwn(methods, method)
         )
           throw new DomainError("不允许的请求。");
-        const fn = methods[method as keyof DesktopApi] as (
+        const fn = methods[method as keyof typeof methods] as (
           ...input: unknown[]
         ) => Promise<unknown>;
-        return { ok: true, value: await fn(...args) };
+        const value = await fn(...args);
+        if (
+          [
+            "settings",
+            "chooseHomeBackground",
+            "configureAi",
+            "removeAiKey",
+            "saveCodexPreferences",
+            "repairSettings",
+            "exportPdf",
+          ].includes(method)
+        )
+          notifyPreferences();
+        return { ok: true, value };
       } catch (error) {
         console.error(
           `[${method}]`,
@@ -1315,6 +1365,45 @@ async function start(): Promise<void> {
       }
     },
   );
+  let previousAi = JSON.stringify(aiPreferences.config());
+  let previousCredential = store.getValue("providerCredential");
+  function notifyPreferences() {
+    if (window.isDestroyed()) return;
+    const settings = store.settings();
+    const aiConfig = aiPreferences.config();
+    if (
+      !settings.aiEnabled ||
+      previousAi !== JSON.stringify(aiConfig) ||
+      previousCredential !== store.getValue("providerCredential")
+    )
+      ai.cancelAll();
+    previousAi = JSON.stringify(aiConfig);
+    previousCredential = store.getValue("providerCredential");
+    window.webContents.setZoomFactor(settings.zoom / 100);
+    window.webContents.send("memorybook-preferences-changed", {
+      settings,
+      aiConfig,
+      hasAiToken: aiPreferences.hasKey(),
+    });
+  }
+  const preferencesTimer = setInterval(() => {
+    try {
+      if (sharedPreferences.changed()) notifyPreferences();
+      health.resolve("shared-settings-sync");
+    } catch {
+      health.report(
+        "shared-settings-sync",
+        new DomainError(
+          "共享设置暂时无法刷新，请检查设置目录；当前工程编辑不受影响。",
+        ),
+      );
+    }
+  }, 1000);
+  preferencesTimer.unref();
+  app.once("will-quit", () => {
+    clearInterval(preferencesTimer);
+    sharedPreferences.close();
+  });
   await window.loadURL("memory://app/");
   const autoBackup = () => {
     void backupDatabase(directory).catch(() =>

@@ -26,6 +26,13 @@ const api: DesktopApi = {
   removeFont: (id) => call("removeFont", id),
   checkResources: (id, pageIds) => call("checkResources", id, pageIds),
   bootstrap: () => call("bootstrap"),
+  onPreferencesChanged: (listener) => {
+    const handler = (_event: unknown, value: Parameters<typeof listener>[0]) =>
+      listener(value);
+    ipcRenderer.on("memorybook-preferences-changed", handler);
+    return () =>
+      ipcRenderer.removeListener("memorybook-preferences-changed", handler);
+  },
   importPhotos: () => call("importPhotos"),
   fonts: () => call("fonts"),
   importFonts: () => call("importFonts"),
@@ -43,7 +50,8 @@ const api: DesktopApi = {
   codexStatus: () => call("codexStatus"),
   reconnectCodex: () => call("reconnectCodex"),
   codexPreferences: () => call("codexPreferences"),
-  saveCodexPreferences: (value) => call("saveCodexPreferences", value),
+  saveCodexPreferences: (value, expected) =>
+    call("saveCodexPreferences", value, expected),
   chooseCodex: () => call("chooseCodex"),
   generationState: () => call("generationState"),
   cancelGeneration: () => call("cancelGeneration"),
@@ -56,9 +64,10 @@ const api: DesktopApi = {
   history: (id, revision, direction) =>
     call("history", id, revision, direction),
   deleteAlbum: (id) => call("deleteAlbum", id),
-  settings: (settings) => call("settings", settings),
+  settings: (settings, expected) => call("settings", settings, expected),
   chooseDirectory: () => call("chooseDirectory"),
-  configureAi: (config, key) => call("configureAi", config, key),
+  configureAi: (config, key, expected) =>
+    call("configureAi", config, key, expected),
   removeAiKey: () => call("removeAiKey"),
   testAiConnection: () => call("testAiConnection"),
   startAi: (id) => call("startAi", id),

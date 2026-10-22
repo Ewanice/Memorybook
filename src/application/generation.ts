@@ -86,10 +86,19 @@ export class GenerationCoordinator {
         "Codex 设置无效；提示词最多 12000 字符，最多选择 5 个 skill。",
       );
   }
-  savePreferences(p: CodexPreferences): void {
+  savePreferences(p: CodexPreferences, expected?: CodexPreferences): void {
     if (this.active) throw new DomainError("请先取消正在进行的生成。");
     this.validate(p);
-    this.store.setValue("codex-preferences", JSON.stringify(p));
+    this.store.preferencesTransaction(() => {
+      if (
+        expected &&
+        JSON.stringify(expected) !== JSON.stringify(this.preferences())
+      )
+        throw new DomainError(
+          "Codex 设置已被另一个副本修改，请重新读取后再保存。",
+        );
+      this.store.setValue("codex-preferences", JSON.stringify(p));
+    });
     this.bridge.close();
     this.bridge = new CodexBridge(this.cwd, p.executable);
     this.executable = p.executable;

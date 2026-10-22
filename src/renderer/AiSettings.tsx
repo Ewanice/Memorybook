@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AiConfig, Bootstrap } from "../domain/model";
 export function AiSettings({
   data,
@@ -14,8 +14,19 @@ export function AiSettings({
   const [busy, setBusy] = useState(false);
   const dirty =
     JSON.stringify(config) !== JSON.stringify(savedConfig) || Boolean(key);
+  useEffect(() => {
+    setHasKey(data.hasAiToken);
+    if (!dirty) {
+      setConfig(data.aiConfig);
+      setSavedConfig(data.aiConfig);
+    }
+  }, [data.aiConfig, data.hasAiToken]);
   async function save(): Promise<void> {
-    await window.memorybook.configureAi(config, key.trim() ? key : null);
+    await window.memorybook.configureAi(
+      config,
+      key.trim() ? key : null,
+      savedConfig,
+    );
     setSavedConfig(config);
     if (key.trim()) setHasKey(true);
     setKey("");
@@ -34,6 +45,26 @@ export function AiSettings({
   return (
     <>
       <h3>连接你自己的 AI 平台</h3>
+      {JSON.stringify(savedConfig) !== JSON.stringify(data.aiConfig) && (
+        <p role="status">
+          另一个副本更新了 AI 设置，当前未保存的输入已保留。
+          <button
+            disabled={busy}
+            onClick={() => {
+              if (
+                !dirty ||
+                window.confirm("放弃当前未保存的 AI 输入，读取最新设置？")
+              ) {
+                setConfig(data.aiConfig);
+                setSavedConfig(data.aiConfig);
+                setKey("");
+              }
+            }}
+          >
+            读取最新设置
+          </button>
+        </p>
+      )}
       <p>
         填写平台提供的 API 地址、模型名称和
         Key。请求直接发送到该平台，费用由你的平台账户承担。

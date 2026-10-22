@@ -15,10 +15,46 @@ export function CodexSettings({
     [status, setStatus] = useState<CodexStatus | null>(null),
     [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [saved, setSaved] = useState<CodexPreferences | null>(null);
+  const [externalChange, setExternalChange] = useState(false);
+  const dirty =
+    value !== null && JSON.stringify(value) !== JSON.stringify(saved);
+  async function reload() {
+    const next = await window.memorybook.codexPreferences();
+    setValue(next);
+    setSaved(next);
+    setExternalChange(false);
+    onDirty(false);
+  }
+  useEffect(() => {
+    let closed = false;
+    const changed = () => {
+      void window.memorybook
+        .codexPreferences()
+        .then((next) => {
+          if (closed || JSON.stringify(next) === JSON.stringify(saved)) return;
+          if (dirty) setExternalChange(true);
+          else {
+            setValue(next);
+            setSaved(next);
+            setExternalChange(false);
+          }
+        })
+        .catch((e) => report(e.message));
+    };
+    window.addEventListener("memorybook-preferences-changed", changed);
+    return () => {
+      closed = true;
+      window.removeEventListener("memorybook-preferences-changed", changed);
+    };
+  }, [dirty, saved]);
   useEffect(() => {
     void window.memorybook
       .codexPreferences()
-      .then(setValue)
+      .then((next) => {
+        setValue(next);
+        setSaved(next);
+      })
       .catch((e) => {
         setLoadError(e.message);
         report(e.message);
@@ -67,6 +103,23 @@ export function CodexSettings({
   return (
     <div className="codex-settings">
       <h3>本地 Codex</h3>
+      {externalChange && (
+        <p role="status">
+          共享设置有更新，未保存的输入仍保留。
+          <button
+            disabled={busy}
+            onClick={() => {
+              if (
+                !dirty ||
+                window.confirm("放弃当前未保存的 Codex 输入，读取最新设置？")
+              )
+                void run(reload);
+            }}
+          >
+            读取最新设置
+          </button>
+        </p>
+      )}
       <p role="status">{status?.message ?? "正在自动检测…"}</p>
       <p className="muted">
         复用本机 Codex 登录，不需要另填 API
@@ -163,8 +216,11 @@ export function CodexSettings({
           disabled={busy}
           onClick={() =>
             void run(async () => {
-              await window.memorybook.saveCodexPreferences(value);
-              onDirty(false);
+              await window.memorybook.saveCodexPreferences(
+                value,
+                saved ?? undefined,
+              );
+              await reload();
               setStatus(await window.memorybook.codexStatus());
               report("Codex 设置已保存。");
             })

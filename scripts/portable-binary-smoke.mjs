@@ -1,21 +1,25 @@
 import { packageRoot } from "./release-paths.mjs";
 import { chromium } from "@playwright/test";
 import { spawn } from "node:child_process";
-import { readFile, writeFile, cp, stat } from "node:fs/promises";
-import { resolve, join } from "node:path";
+import { readFile, writeFile, stat, mkdir, copyFile } from "node:fs/promises";
+import { resolve, join, dirname } from "node:path";
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 const source = packageRoot,
   root = resolve(`.local/portable-binary-${Date.now()}/Memorybook`),
   data = join(root, "data");
-await cp(source, root, {
-  recursive: true,
-  filter: (path) =>
-    !path.includes("imported-fonts") && !path.startsWith(join(source, "data")),
-});
+const programFiles = JSON.parse(
+  await readFile(join(source, "program-files.json"), "utf8"),
+);
+assert(!programFiles.includes("phrases.txt"));
+for (const file of programFiles) {
+  await mkdir(dirname(join(root, file)), { recursive: true });
+  await copyFile(join(source, file), join(root, file));
+}
+const settingsDirectory = join(root, "..", "shared-settings");
 const child = spawn(
   join(root, "Memorybook.exe"),
-  ["--remote-debugging-port=0"],
+  ["--settings-dir=" + settingsDirectory, "--remote-debugging-port=0"],
   { windowsHide: true, stdio: "ignore" },
 );
 let browser;
@@ -106,6 +110,7 @@ try {
         defaultDirectoryVerified: true,
         freshStartupDefaultsVerified: true,
         noPrecreatedDatabase: true,
+        isolatedSharedSettings: true,
         clearExportDirectoryVerified: true,
         externalMaterialsVerified: true,
         archiveSha256: createHash("sha256")
@@ -117,7 +122,7 @@ try {
     ),
   );
   console.log(
-    "实际完整文件夹版通过：未指定 profile 参数，工程、缓存、字体与短语路径均位于软件目录。",
+    "实际完整文件夹版通过：未指定工程 profile 参数，工程、缓存、字体与短语位于软件目录，共享设置使用隔离测试目录。",
   );
 } finally {
   if (browser) await browser.close();

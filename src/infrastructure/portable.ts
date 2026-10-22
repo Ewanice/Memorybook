@@ -17,6 +17,7 @@ export type StoragePaths = {
   root: string;
   data: string;
   migrate: boolean;
+  preferences?: string;
 };
 export function configureStorage(app: App, development: boolean): StoragePaths {
   const appPath = app.getAppPath();
@@ -45,6 +46,14 @@ export function configureStorage(app: App, development: boolean): StoragePaths {
     root,
     data,
     migrate: !development && !explicit,
+    preferences: resolve(
+      process.argv
+        .find((arg) => arg.startsWith("--settings-dir="))
+        ?.slice(15) ||
+        (development || explicit
+          ? join(data, "shared-settings")
+          : join(app.getPath("appData"), "Memorybook", "shared-settings")),
+    ),
   };
 }
 async function exists(path: string): Promise<boolean> {

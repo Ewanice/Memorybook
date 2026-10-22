@@ -46,7 +46,18 @@ export class AiPreferences {
       throw new DomainError("API 地址已改变，请为该地址重新输入 Key。");
     return value.key;
   }
-  configure(input: unknown, key: string | null): void {
+  configure(input: unknown, key: string | null, expected?: AiConfig): void {
+    this.store.preferencesTransaction(() =>
+      this.configureLocked(input, key, expected),
+    );
+  }
+  private configureLocked(
+    input: unknown,
+    key: string | null,
+    expected?: AiConfig,
+  ): void {
+    if (expected && JSON.stringify(expected) !== JSON.stringify(this.config()))
+      throw new DomainError("AI 设置已被另一个副本修改，请重新读取后再保存。");
     assertAiConfig(input);
     if (
       key !== null &&
@@ -68,10 +79,8 @@ export class AiPreferences {
         : this.cipher.encrypt(
             JSON.stringify({ identity: aiIdentity(input), key: key.trim() }),
           );
-    this.store.transaction(() => {
-      this.store.setValue("aiConfig", JSON.stringify(input));
-      if (encoded !== null) this.store.setValue("providerCredential", encoded);
-    });
+    this.store.setValue("aiConfig", JSON.stringify(input));
+    if (encoded !== null) this.store.setValue("providerCredential", encoded);
   }
   removeKey(): void {
     this.store.setValue("providerCredential", "");

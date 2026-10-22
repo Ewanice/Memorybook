@@ -24,6 +24,12 @@ assert.equal(
     .development,
   false,
 );
+assert(
+  extractFile(archive, "dist/phrases.txt").equals(
+    await readFile("assets/phrases.txt"),
+  ),
+  "短语默认值只能来自公开种子文件",
+);
 const main = extractFile(archive, "dist/main.cjs").toString();
 const fuse = await getCurrentFuseWire(resolve(root, "Memorybook.exe"));
 assert.equal(fuse[FuseV1Options.RunAsNode], FuseState.DISABLE);

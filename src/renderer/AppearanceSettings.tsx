@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { Settings } from "../domain/model";
 import { TextField, CommitInput } from "./Fields";
-import { assetUrl } from "./Scene";
 
 export function themeVariables(accent = "#315a43"): Record<string, string> {
   const rgb = [1, 3, 5].map((n) => parseInt(accent.slice(n, n + 2), 16) / 255);
@@ -28,7 +27,9 @@ export function AppearanceSettings({
   async function save(patch: Partial<Settings>) {
     setBusy(true);
     try {
-      onUpdate(await window.memorybook.settings({ ...settings, ...patch }));
+      onUpdate(
+        await window.memorybook.settings({ ...settings, ...patch }, settings),
+      );
     } catch (e) {
       report((e as Error).message);
     } finally {
@@ -82,7 +83,7 @@ export function AppearanceSettings({
           <img
             className="home-background-preview"
             alt="当前首页背景"
-            src={assetUrl(settings.homeBackground, "preview")}
+            src={`memory://appearance/${settings.homeBackground}?variant=preview`}
           />
         )}
         <div className="button-row">

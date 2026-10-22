@@ -51,10 +51,6 @@ module.exports = {
             recursive: true,
           },
         );
-        fs.copyFileSync(
-          "assets/phrases.txt",
-          path.join(directory, "phrases.txt"),
-        );
         const target = path.resolve("out/packages/Memorybook-win32-x64");
         publishProgram(directory, target);
         result.outputPaths[index] = target;

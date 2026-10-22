@@ -19,7 +19,7 @@ import { defaultSettings } from "../src/domain/model";
 import type { App } from "electron";
 import { rm } from "node:fs/promises";
 
-test("全新目录不读取系统用户目录，不继承其他安装的设置或工程；本目录重启保留设置", async (t) => {
+test("工程目录不从旧系统数据库复制资料；本目录重启保留独立数据", async (t) => {
   const folder = await mkdtemp(join(tmpdir(), "memory-fresh-"));
   t.after(() => rm(folder, { recursive: true, force: true }));
   const legacy = join(folder, "old-system-profile"),

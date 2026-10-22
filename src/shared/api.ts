@@ -59,6 +59,11 @@ export interface DesktopApi {
     pageIds?: string[],
   ): Promise<{ assets: string[]; fonts: string[] }>;
   bootstrap(): Promise<Bootstrap>;
+  onPreferencesChanged(
+    listener: (
+      value: Pick<Bootstrap, "settings" | "aiConfig" | "hasAiToken">,
+    ) => void,
+  ): () => void;
   importPhotos(): Promise<ImportResult>;
   fonts(): Promise<import("../domain/fonts").ImportedFont[]>;
   importFonts(): Promise<{
@@ -88,6 +93,7 @@ export interface DesktopApi {
   codexPreferences(): Promise<import("../domain/codex").CodexPreferences>;
   saveCodexPreferences(
     value: import("../domain/codex").CodexPreferences,
+    expected?: import("../domain/codex").CodexPreferences,
   ): Promise<void>;
   chooseCodex(): Promise<string | null>;
   generationState(): Promise<
@@ -118,9 +124,13 @@ export interface DesktopApi {
   ): Promise<Album>;
   deleteAlbum(id: string): Promise<void>;
   duplicateAlbum(id: string): Promise<Album>;
-  settings(settings: Settings): Promise<Settings>;
+  settings(settings: Settings, expected?: Settings): Promise<Settings>;
   chooseDirectory(): Promise<string | null>;
-  configureAi(config: AiConfig, apiKey: string | null): Promise<void>;
+  configureAi(
+    config: AiConfig,
+    apiKey: string | null,
+    expected?: AiConfig,
+  ): Promise<void>;
   removeAiKey(): Promise<void>;
   testAiConnection(): Promise<string>;
   startAi(id: string): Promise<void>;
@@ -132,6 +142,7 @@ export interface DesktopApi {
   dataDirectory(): Promise<void>;
   storageInfo(): Promise<{
     root: string;
+    preferences: string;
     data: string;
     assets: string;
     cache: string;

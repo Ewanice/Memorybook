@@ -53,6 +53,14 @@ import "./styles.css";
 const api = window.memorybook;
 export function App() {
   const [data, setData] = useState<Bootstrap | null>(null);
+  useEffect(
+    () =>
+      api.onPreferencesChanged((value) => {
+        setData((current) => (current ? { ...current, ...value } : current));
+        window.dispatchEvent(new Event("memorybook-preferences-changed"));
+      }),
+    [],
+  );
   const [error, setError] = useState("");
   const [album, setAlbum] = useState<Album | null>(null);
   const current = useRef<Album | null>(null);
@@ -862,7 +870,7 @@ export function App() {
             style={
               {
                 "--home-background": data.settings.homeBackground
-                  ? `url("${assetUrl(data.settings.homeBackground, "preview")}")`
+                  ? `url("memory://appearance/${data.settings.homeBackground}?variant=preview")`
                   : "none",
                 "--home-opacity": data.settings.homeBackgroundOpacity ?? 0.16,
                 "--home-scale": data.settings.homeBackgroundScale ?? 1,
@@ -2420,7 +2428,11 @@ export function App() {
                 .catch((e) => report(e.message));
             }}
             report={report}
-            onUpdate={(settings) => setData({ ...data, settings })}
+            onUpdate={(settings) =>
+              setData((current) =>
+                current ? { ...current, settings } : current,
+              )
+            }
           />
         )}
         {templateEditor && (
