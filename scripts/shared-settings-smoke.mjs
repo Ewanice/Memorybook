@@ -1,3 +1,4 @@
+import { stopTestApp } from "./stop-test-app.mjs";
 import { packageRoot } from "./release-paths.mjs";
 import { chromium } from "@playwright/test";
 import { spawn } from "node:child_process";
@@ -24,7 +25,16 @@ async function copyProgram(name) {
   assert(!files.includes("phrases.txt"), "更新包不能把个人短语作为覆盖目标");
   for (const file of files) {
     await mkdir(dirname(join(target, file)), { recursive: true });
-    await copyFile(join(packageRoot, file), join(target, file));
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await copyFile(join(packageRoot, file), join(target, file));
+        break;
+      } catch (error) {
+        if (!["EBUSY", "EPERM"].includes(error.code) || attempt >= 100)
+          throw error;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
   }
   return target;
 }
@@ -59,31 +69,21 @@ async function launch(root) {
   }
   assert(port);
   instance.browser = await chromium.connectOverCDP("http://127.0.0.1:" + port);
-  instance.page = instance.browser
-    .contexts()[0]
-    .pages()
-    .find((p) => p.url().startsWith("memory://app/"));
+  for (let i = 0; i < 150; i++) {
+    instance.page = instance.browser
+      .contexts()
+      .flatMap((context) => context.pages())
+      .find((page) => page.url().startsWith("memory://app/"));
+    if (instance.page) break;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert(instance.page, "软件窗口必须完成加载");
   await instance.page.getByRole("heading", { name: "我的纪念册" }).waitFor();
   return instance;
 }
 async function stop(instance) {
-  if (instance.browser) {
-    await instance.browser.close();
-    instance.browser = null;
-  }
-  if (instance.child.exitCode === null && instance.child.signalCode === null)
-    instance.child.kill();
-  for (
-    let i = 0;
-    i < 100 &&
-    instance.child.exitCode === null &&
-    instance.child.signalCode === null;
-    i++
-  )
-    await new Promise((r) => setTimeout(r, 50));
-  assert(
-    instance.child.exitCode !== null || instance.child.signalCode !== null,
-  );
+  await stopTestApp(instance.child, instance.root, instance.browser);
+  instance.browser = null;
 }
 const boot = (p) => p.evaluate(() => window.memorybook.bootstrap());
 async function createBook(page, title) {

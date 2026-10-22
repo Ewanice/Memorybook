@@ -30,6 +30,15 @@ const portable = JSON.parse(
 const shared = JSON.parse(
   await readFile(".local/shared-settings-verification.json", "utf8"),
 );
+const updates = JSON.parse(
+  await readFile(".local/update-build-verification.json", "utf8"),
+);
+const updateUi = JSON.parse(
+  await readFile(".local/update-ui-verification.json", "utf8"),
+);
+const updateNative = JSON.parse(
+  await readFile(".local/update-native-verification.json", "utf8"),
+);
 const digest = async (path) =>
   createHash("sha256")
     .update(await readFile(path))
@@ -39,6 +48,15 @@ if (
   !binary.passed ||
   !portable.passed ||
   !shared.passed ||
+  !updates.passed ||
+  !updateUi.passed ||
+  !updateNative.passed ||
+  updates.archiveSha256 !== verified.archiveSha256 ||
+  updateUi.archiveSha256 !== verified.archiveSha256 ||
+  updateNative.launcherSha256 !==
+    (await digest(join(source, "Memorybook.exe"))) ||
+  verified.electronBinarySha256 !==
+    (await digest(join(source, "Memorybook.App.exe"))) ||
   shared.archiveSha256 !== verified.archiveSha256 ||
   portable.archiveSha256 !== verified.archiveSha256 ||
   verified.archiveSha256 !==
@@ -69,7 +87,7 @@ Windows x64 完整文件夹版
 
 1. 将整个压缩包解压到可写的目录，例如 D:\\Memorybook。不要只解压 EXE，也不要直接在压缩包内运行。
 2. 进入“Memorybook”文件夹，运行 Memorybook.exe。保留旁边的 DLL、locales、resources 与 materials；phrases.txt 首次使用时自动创建。
-3. 打开即用，无需卡密、激活或登录；普通编辑与导出可离线使用。
+3. 打开即用，无需卡密、激活或登录；普通编辑与导出可离线使用。Memorybook.exe 是启动与恢复程序，请保留旁边的 Memorybook.App.exe。
 4. 首页可管理贴纸、短语和排版。排版支持编辑、删除与恢复默认，封面单独标注。新建时贴纸默认全选，可按需取消；可从排版库选择封面，其余内页排版随机轮用，也可选择本地 Codex 生成。
    两个默认封面均可自定义，完整图片封面带顶部居中文字框。编辑器“封面排版”可预览替换；“＋贴纸”直接选用全局贴纸库；照片与贴纸分别显示对应素材。
 5. 选择任何元素调整大小、位置、字体和内容；右侧“页面底色与纸张”可逐页更换背景。文字“文字描边”默认关闭，可设颜色与粗细；图片“边缘与边框”可选圆角、椭圆、拱形、票根、撕纸、波浪及细线、虚线、双线、拍立得留白，也可用于自建排版。
@@ -82,6 +100,10 @@ Windows x64 完整文件夹版
 设置：同一 Windows 用户下的新版副本共用设置（%APPDATA%/Memorybook/shared-settings），包含导出目录、外观、AI 与 Codex 配置；删除程序文件夹后仍保留。首次升级只在共享设置不存在时采用当前目录旧设置，之后不会被其他副本的旧值覆盖。工程和素材库不共享，不从系统旧数据库自动复制。
 以后更新：先关闭各个软件窗口，将完整新版解压覆盖到原位置。更新包不含 data、导入字体或根目录 phrases.txt，不覆盖已有个人资料；首次启动时才在根目录创建默认 phrases.txt。工程留在各自软件文件夹：删除整个软件文件夹也会删除其中的工程，请先备份。
 本机 AI Key 经过 Windows 加密，更换电脑需重新填写。建议通过工程备份迁移。设置 → 文件与导出 → 清除默认导出目录，可清除旧路径而不影响工程。
+
+手动更新
+设置 → 关于 → 检查更新；启动时不主动检查或提示。下载与准备可取消，准备后重启更新，独立更新窗口也可取消并恢复原程序。优先二进制差分，原文件不匹配时使用完整更新。根目录 update-source.json 在首次检查时创建，可配置 GitHub 或静态 HTTPS 更新源，不随更新覆盖。
+首次从 1.7.3 或更早版本升级到 1.8.0 仍需手动解压覆盖。更新验证失败或中途断电时，启动器会恢复未提交的程序替换，工程与素材不参与替换。启动器使用 Windows 10/11 通常自带的 .NET Framework 4 系列。
 
 可选 AI
 设置中填写自己购买的 AI API Base URL、协议、模型和 API Key。也可自动连接本机已安装并登录的 Codex；生成时通常联网消耗相应账户额度。普通编辑、保存和 PDF 导出均离线。

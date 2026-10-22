@@ -1,3 +1,4 @@
+import { stopTestApp } from "./stop-test-app.mjs";
 import { packageRoot } from "./release-paths.mjs";
 import { chromium } from "@playwright/test";
 import { spawn } from "node:child_process";
@@ -125,6 +126,5 @@ try {
     "实际完整文件夹版通过：未指定工程 profile 参数，工程、缓存、字体与短语位于软件目录，共享设置使用隔离测试目录。",
   );
 } finally {
-  if (browser) await browser.close();
-  if (child.exitCode === null) child.kill();
+  await stopTestApp(child, root, browser);
 }

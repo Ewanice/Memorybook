@@ -1,3 +1,4 @@
+import { stopTestApp } from "./stop-test-app.mjs";
 import { packageRoot } from "./release-paths.mjs";
 import { createHash } from "node:crypto";
 import { chromium } from "@playwright/test";
@@ -65,6 +66,5 @@ try {
   );
   console.log("Exact shipped executable rendered directly without activation.");
 } finally {
-  if (browser) await browser.close();
-  if (child.exitCode === null) child.kill();
+  await stopTestApp(child, packageRoot, browser);
 }

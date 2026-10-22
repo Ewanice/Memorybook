@@ -10,6 +10,9 @@ import {
   nativeImage,
   screen,
 } from "electron";
+import { spawn } from "node:child_process";
+import { UpdateManager } from "../infrastructure/update-manager";
+import updateTrust from "../../assets/update-public-key.json";
 import { readFile, mkdir, stat, mkdtemp, rm, unlink } from "node:fs/promises";
 import { join, dirname, basename, resolve, sep } from "node:path";
 import { PDFDocument, rgb } from "pdf-lib";
@@ -731,7 +734,96 @@ async function start(): Promise<void> {
     });
     if (choice === 1) event.preventDefault();
   });
+  const updateSession = session.fromPartition("memorybook-updates", {
+    cache: false,
+  });
+  const updater = new UpdateManager({
+    root: storage.root,
+    version: app.getVersion(),
+    publicKey: updateTrust.publicKey,
+    seed: join(__dirname, "update-source.default.json"),
+    fetch: (input, init) =>
+      updateSession.fetch(input instanceof URL ? input.href : input, init),
+  });
   const methods: Omit<DesktopApi, "onPreferencesChanged"> = {
+    updateState: async () => updater.state,
+    checkUpdate: () => updater.check(),
+    prepareUpdate: () => updater.prepare(),
+    cancelUpdate: async () => {
+      await updater.cancel();
+    },
+    installUpdate: async () => {
+      if (service.hasBusyTask() || generation.state.status === "running")
+        throw new DomainError("请先结束 AI、导出或生成任务，再更新程序。");
+      const arguments_ = process.argv.filter((arg) =>
+        /^--(user-data-dir|settings-dir|remote-debugging-port)=/.test(arg),
+      );
+      const launcher = Number(
+        process.argv
+          .find((arg) => arg.startsWith("--launcher-pid="))
+          ?.slice(15),
+      );
+      const plan = await updater.installation(arguments_, [
+        process.pid,
+        ...(launcher ? [launcher] : []),
+      ]);
+      const child = spawn(
+        plan.helper,
+        [
+          "--apply-update=" + plan.id,
+          "--root=" + storage.root,
+          ...(process.argv.includes("--update-headless") &&
+          process.argv.some((arg) => arg.startsWith("--user-data-dir="))
+            ? ["--headless"]
+            : []),
+        ],
+        { detached: true, stdio: "ignore", windowsHide: true },
+      );
+      let launchError: Error | undefined;
+      child.on("error", (error) => {
+        launchError = error;
+      });
+      child.unref();
+      for (let i = 0; i < 100; i++) {
+        if (launchError)
+          throw new DomainError("更新程序无法启动，请检查目录权限。");
+        try {
+          await stat(join(plan.directory, "helper-ready.json"));
+          app.quit();
+          return;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      throw new DomainError(
+        "更新窗口未能准备完成，请检查任务栏或重新启动软件。",
+      );
+    },
+    confirmUpdateReady: async () => {
+      const id = process.argv
+        .find((arg) => arg.startsWith("--update-health="))
+        ?.slice(16);
+      if (!id) return;
+      if (!/^[a-f0-9]{32}$/.test(id))
+        throw new DomainError("更新启动标记无效。");
+      const directory = join(storage.root, ".updates", id);
+      const plan = JSON.parse(
+        await readFile(join(directory, "plan.json"), "utf8"),
+      ) as { id: string; version: string; root: string };
+      if (
+        plan.id !== id ||
+        plan.version !== app.getVersion() ||
+        resolve(plan.root) !== resolve(storage.root)
+      )
+        throw new DomainError("新版启动信息不匹配，更新程序会恢复原版本。");
+      await atomicWrite(
+        join(directory, "health-ready.json"),
+        Buffer.from(
+          JSON.stringify({ id, version: app.getVersion(), pid: process.pid }),
+        ),
+      );
+    },
     templateDraft: async () => {
       const raw = store.getValue("layout-draft");
       if (!raw) return null;

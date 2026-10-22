@@ -31,7 +31,7 @@ assert(
   "短语默认值只能来自公开种子文件",
 );
 const main = extractFile(archive, "dist/main.cjs").toString();
-const fuse = await getCurrentFuseWire(resolve(root, "Memorybook.exe"));
+const fuse = await getCurrentFuseWire(resolve(root, "Memorybook.App.exe"));
 assert.equal(fuse[FuseV1Options.RunAsNode], FuseState.DISABLE);
 assert.equal(
   fuse[FuseV1Options.EnableEmbeddedAsarIntegrityValidation],
@@ -78,6 +78,9 @@ try {
         passed: true,
         archiveSha256: createHash("sha256")
           .update(await readFile(archive))
+          .digest("hex"),
+        electronBinarySha256: createHash("sha256")
+          .update(await readFile(resolve(root, "Memorybook.App.exe")))
           .digest("hex"),
         files: files.length,
         activationApiRemoved: true,

@@ -168,6 +168,25 @@ export function App() {
       window.removeEventListener("memorybook-data-changed", changed);
     };
   }, []);
+  useEffect(() => {
+    const install = () => {
+      void (async () => {
+        (document.activeElement as HTMLElement | null)?.blur();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        await queue.current;
+        if (
+          pendingEdits.current.length ||
+          saveFailed.current ||
+          document.querySelector('[data-dirty="true"]')
+        )
+          throw new Error("请先保存当前输入或处理保存错误，再重启更新。");
+        await api.installUpdate();
+      })().catch((error) => report(error.message));
+    };
+    window.addEventListener("memorybook-install-update", install);
+    return () =>
+      window.removeEventListener("memorybook-install-update", install);
+  }, [report]);
   const refresh = useCallback(async () => {
     const boot = await api.bootstrap();
     await loadImportedFonts([
@@ -178,6 +197,7 @@ export function App() {
     setData(boot);
     setResources(await api.resources());
     setTemplateDraft(await api.templateDraft());
+    await api.confirmUpdateReady();
     const issues = await api.health();
     if (issues.length)
       report(

@@ -1,6 +1,6 @@
 {
   "name": "memorybook-desktop",
-  "version": "1.7.3",
+  "version": "1.8.0",
   "private": true,
   "description": "离线纪念册设计器",
   "author": "Memorybook",
@@ -34,7 +34,9 @@
     "smoke:effects": "node scripts/effects-smoke.mjs",
     "smoke:customization": "node scripts/customization-smoke.mjs",
     "smoke:background": "node scripts/background-smoke.mjs",
-    "smoke:settings": "node scripts/shared-settings-smoke.mjs"
+    "smoke:settings": "node scripts/shared-settings-smoke.mjs",
+    "update:build": "node scripts/build-update.mjs",
+    "smoke:update": "node scripts/update-native-smoke.mjs && node scripts/update-ui-smoke.mjs"
   },
   "config": {
     "forge": "./forge.config.cjs"

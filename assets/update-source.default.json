@@ -1,0 +1,6 @@
+{
+  "provider": "github",
+  "apiBase": "https://api.github.com",
+  "repository": "Ewanice/Memorybook",
+  "manifestAsset": "update-manifest.json"
+}

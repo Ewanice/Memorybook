@@ -51,6 +51,14 @@ module.exports = {
             recursive: true,
           },
         );
+        fs.renameSync(
+          path.join(directory, "Memorybook.exe"),
+          path.join(directory, "Memorybook.App.exe"),
+        );
+        fs.copyFileSync(
+          ".local/MemorybookLauncher.exe",
+          path.join(directory, "Memorybook.exe"),
+        );
         const target = path.resolve("out/packages/Memorybook-win32-x64");
         publishProgram(directory, target);
         result.outputPaths[index] = target;

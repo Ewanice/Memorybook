@@ -1,1 +1,1 @@
-15dca0ac9c6b7090dde972561d4dca34de0606fcbcd957f8ba8233760656dad6  Memorybook-Windows-x64.zip
+4d718b607b9c13268e30e0e3f8c4bc0b53892c773cef91e0ccd3e2ccf1be1bc4  Memorybook-Windows-x64.zip

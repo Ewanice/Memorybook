@@ -10,6 +10,28 @@ await mkdir("dist", { recursive: true });
 await rm("dist/短语库.txt", { force: true });
 await copyFile("assets/icon.png", "dist/icon.png");
 await copyFile("assets/phrases.txt", "dist/phrases.txt");
+await copyFile(
+  "assets/update-source.default.json",
+  "dist/update-source.default.json",
+);
+const { execFileSync } = await import("node:child_process");
+const { resolve } = await import("node:path");
+execFileSync(
+  "C:/Windows/Microsoft.NET/Framework64/v4.0.30319/csc.exe",
+  [
+    "/nologo",
+    "/target:winexe",
+    "/platform:x64",
+    "/codepage:65001",
+    "/win32icon:" + resolve("assets/icon.ico"),
+    "/reference:System.Windows.Forms.dll",
+    "/reference:System.Drawing.dll",
+    "/reference:System.Web.Extensions.dll",
+    "/out:" + resolve(".local/MemorybookLauncher.exe"),
+    resolve("tools/MemorybookLauncher.cs"),
+  ],
+  { windowsHide: true, stdio: "inherit" },
+);
 const fontDirectory = ".local/runtime-public/fonts";
 await mkdir(fontDirectory, { recursive: true });
 let fontCss = "";

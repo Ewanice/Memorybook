@@ -6,6 +6,7 @@ import { PhraseEditor } from "./PhraseEditor";
 import { FontSettings } from "./FontSettings";
 import { CodexSettings } from "./CodexSettings";
 import { StoragePanel } from "./RecoveryCenter";
+import { UpdatePanel } from "./UpdatePanel";
 import { AppearanceSettings } from "./AppearanceSettings";
 export function SettingsDialog({
   data,
@@ -321,7 +322,7 @@ export function SettingsDialog({
                   />
                   允许主动使用 AI
                 </label>
-                <AiSettings data={data} action={action} />
+                <AiSettings data={data} action={action} onDirty={setDirty} />
               </>
             )}
             {tab === "关于" && (
@@ -334,9 +335,11 @@ export function SettingsDialog({
                   {data.development ? " · 开发构建" : ""}
                 </p>
                 <p className="muted">
-                  打开即可使用，普通编辑与 PDF 导出均可离线完成。AI 使用你自己的
-                  API Key 或本地 Codex。
+                  打开即可使用，普通编辑与 PDF
+                  导出均可离线完成。手动检查更新时联网；AI 使用你自己的 API Key
+                  或本地 Codex。
                 </p>
+                <UpdatePanel />
                 <button
                   disabled={busy}
                   onClick={() =>

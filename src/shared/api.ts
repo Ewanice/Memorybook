@@ -29,6 +29,16 @@ export type EditResult =
   | { status: "saved"; album: Album }
   | { status: "rejected"; album: Album; message: string };
 export interface DesktopApi {
+  updateState(): Promise<
+    import("../infrastructure/update-protocol").UpdateState
+  >;
+  checkUpdate(): Promise<
+    import("../infrastructure/update-protocol").UpdateState
+  >;
+  prepareUpdate(): Promise<void>;
+  cancelUpdate(): Promise<void>;
+  installUpdate(): Promise<void>;
+  confirmUpdateReady(): Promise<void>;
   health(): Promise<import("../infrastructure/health").ResourceIssue[]>;
   recovery(): Promise<
     ReturnType<import("../infrastructure/store").Store["recovery"]>

@@ -10,6 +10,12 @@ async function call<T>(method: string, ...args: unknown[]): Promise<T> {
   return result.value;
 }
 const api: DesktopApi = {
+  updateState: () => call("updateState"),
+  checkUpdate: () => call("checkUpdate"),
+  prepareUpdate: () => call("prepareUpdate"),
+  cancelUpdate: () => call("cancelUpdate"),
+  installUpdate: () => call("installUpdate"),
+  confirmUpdateReady: () => call("confirmUpdateReady"),
   health: () => call("health"),
   recovery: () => call("recovery"),
   recover: (id, kind) => call("recover", id, kind),

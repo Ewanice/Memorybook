@@ -23,3 +23,6 @@ materials/imported-fonts/
 .env*
 !.env.example
 exports/
+
+/update-source.json
+.updates/

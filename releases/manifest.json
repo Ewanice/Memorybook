@@ -1,14 +1,14 @@
 {
-  "version": "1.7.3",
+  "version": "1.8.0",
   "platform": "win32-x64",
   "distribution": "folder",
   "activationRequired": false,
   "codeSigned": false,
   "file": "Memorybook-Windows-x64.zip",
-  "bytes": 172469841,
-  "sha256": "15dca0ac9c6b7090dde972561d4dca34de0606fcbcd957f8ba8233760656dad6",
+  "bytes": 172504524,
+  "sha256": "4d718b607b9c13268e30e0e3f8c4bc0b53892c773cef91e0ccd3e2ccf1be1bc4",
   "verification": {
-    "unitTestsPassed": 80,
+    "unitTestsPassed": 84,
     "binaryStartup": true,
     "portableStorage": true,
     "sharedSettingsLiveSync": true,
@@ -18,6 +18,11 @@
     "archiveOverwriteVerified": true,
     "clearExportDirectory": true,
     "zipFileHashes": true,
-    "personalFilesExcluded": true
+    "personalFilesExcluded": true,
+    "manualUpdatesOnly": true,
+    "binaryDifferentialUpdates": true,
+    "signedUpdateManifest": true,
+    "updateCancellationAndRollback": true,
+    "actualUpdateRestart": true
   }
 }

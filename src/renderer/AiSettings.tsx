@@ -3,8 +3,10 @@ import type { AiConfig, Bootstrap } from "../domain/model";
 export function AiSettings({
   data,
   action,
+  onDirty,
 }: {
   data: Bootstrap;
+  onDirty?: (value: boolean) => void;
   action: (fn: () => Promise<unknown>, success?: string) => Promise<void>;
 }) {
   const [config, setConfig] = useState(data.aiConfig);
@@ -21,6 +23,9 @@ export function AiSettings({
       setSavedConfig(data.aiConfig);
     }
   }, [data.aiConfig, data.hasAiToken]);
+  useEffect(() => {
+    onDirty?.(dirty);
+  }, [dirty, onDirty]);
   async function save(): Promise<void> {
     await window.memorybook.configureAi(
       config,
